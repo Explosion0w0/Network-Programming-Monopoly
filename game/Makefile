@@ -1,22 +1,15 @@
 include ./Make.defines
 
-PROGS = testcli testserv #client server
+PROGS = testcli testserv
 
 all:	${PROGS}
 
-
-#client:	client.o
-#		${CC} ${CFLAGS} -o $@ client.o ${LIBS}
-
-#server:	server.o
-#		${CC} ${CFLAGS} -o $@ server.o ${LIBS}
-		
-		
-testcli:	testcli.o
-		${CC} ${CFLAGS} -o $@ testcli.o ${LIBS}
+	
+testcli:	testcli.c
+		${CC} ${CFLAGS} testcli.c -o testcli ${LIBS}
 
 testserv:	testserv.cpp
-		g++ ${CFLAGS} -o testserv testserv.cpp ${LIBS}
+		g++ ${CFLAGS} testserv.cpp -o testserv ${LIBS}
 
 
 clean:

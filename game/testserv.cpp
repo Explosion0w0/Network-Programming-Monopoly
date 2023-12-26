@@ -4,7 +4,7 @@ extern "C" {
 #include "unp.h"
 } 
 
-
+using namespace std;
 
 void
 sig_chld(int signo)
