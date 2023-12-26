@@ -1,3 +1,5 @@
+!Makefile
+!Make.defines
 unpv13e/
-*.o
-*
+.vscode/
+bin/*

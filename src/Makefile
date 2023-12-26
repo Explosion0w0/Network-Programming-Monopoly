@@ -6,10 +6,10 @@ all:	${PROGS}
 
 	
 testcli:	testcli.c
-		${CC} ${CFLAGS} testcli.c -o testcli ${LIBS}
+		${CC} ${CFLAGS} testcli.c -o ../bin/testcli ${LIBS}
 
 testserv:	testserv.cpp
-		g++ ${CFLAGS} testserv.cpp -o testserv ${LIBS}
+		g++ ${CFLAGS} testserv.cpp -o ../bin/testserv ${LIBS}
 
 
 clean:
