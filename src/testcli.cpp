@@ -1,18 +1,21 @@
-//#include	"unp.h"
 #include <string>
 #include <map>
 #include <cstdio>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <arpa/inet.h>
+//#include <unistd.h>
+//#include <fcntl.h>
+//#include <sys/socket.h>
+//#include <sys/types.h>
+//#include <arpa/inet.h>
 #include <wx/wxprec.h>
 #include <wx/thread.h>
 #include <wx/event.h>
 #ifndef WX_PRECOMP
     #include <wx/wx.h>
 #endif
+
+extern "C" { 
+    #include <unp.h>
+} 
 
 using namespace std;
 

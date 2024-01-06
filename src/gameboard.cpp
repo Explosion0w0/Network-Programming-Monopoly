@@ -897,9 +897,13 @@ void game(WaitingRoom *room) {
 
 
 int main () {
-    unsigned int seed;
-    seed = (unsigned int)time(NULL);
-    srand(seed);
-    WaitingRoom room = {3, {"Explosion0w0", "kwkwkwkak", "LIAN26880912"}, {3000, 3001, 3002}};
+    /*
+        unsigned int seed;
+        seed = (unsigned int)time(NULL);
+        srand(seed);
+    */
+
+    srand(42); // for test
+    WaitingRoom room = {3, {"Explosion0w0", "kwkwkwkak", "LIAN26880912"}, {3000, 3001, 3002}}; // for test
     game(&room);
 }
