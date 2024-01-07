@@ -14,23 +14,26 @@ using namespace std;
 
 //this is for server
 /*
-    To Do:
-        監獄、入獄
-        Player check banckrupt
-        Card.execute()
-        Field.execute()
     
-
     測試版:
         經過起點只有1$ (Field::execute())
         一般土地過路費*3 (Field::calcRent())
+        Timeout 10s (void game() -> alarm())
 
 
 */
 
+
+
+static void sig_alrm(int signo) {
+    return;
+}
+
 class Gameboard;
 class Player;
 class Field;
+
+
 
 
 struct WaitingRoom {
@@ -282,14 +285,7 @@ class Player {
         void earn(int n) {
             this->money += n;
         }
-        void pay(int n) {
-            this->money -= n;
-            if (this->money < 0) {
-                if (!(this->sellForMoney())) {
-                    this->declareBankrupt();
-                }
-            }
-        }
+        void pay(int n);
         void payToPlayer(Player *other, int n) {
             other->earn(n);
             cout << this->name << " 付給 " << other->name << " " << n << "$\n";
@@ -348,6 +344,7 @@ class Player {
         int passedStart = 0;
         Gameboard *gameboard = nullptr;
         int inJail = 0;
+        int getUserInput(int &input);
 };
 
 
@@ -369,9 +366,9 @@ struct RentInfo {
 class Field {   // 格子
     public:
         Field(): type(0), name("") {fill_n(this->siblings, 3, nullptr);}
-        Field(int type, string name): type(type), name(name) {fill_n(this->siblings, 3, nullptr);}
-        Field(int type, string name, int tax): type(type), name(name), rentInfo({0,tax,0,0,0,0,0,0}) {fill_n(this->siblings, 3, nullptr);}
-        Field(int type, string name, int color, RentInfo rentInfo): type(type), name(name), color(color), rentInfo(rentInfo) {fill_n(this->siblings, 3, nullptr);}
+        Field(int type, string name, Gameboard *board): type(type), name(name), gameboard(board) {fill_n(this->siblings, 3, nullptr);}
+        Field(int type, string name, int tax, Gameboard *board): type(type), name(name), rentInfo({0,tax,0,0,0,0,0,0}), gameboard(board) {fill_n(this->siblings, 3, nullptr);}
+        Field(int type, string name, int color, RentInfo rentInfo, Gameboard *board): type(type), name(name), color(color), rentInfo(rentInfo), gameboard(board) {fill_n(this->siblings, 3, nullptr);}
         void setSibling(Field *sib) {this->siblings[this->siblingNum++] = sib;}
         RentInfo getRentInfo() const {return this->rentInfo;}
         int getTax() const {return ((this->type == 9) ? this->rentInfo.rent : 0);}
@@ -474,10 +471,10 @@ class Field {   // 格子
             if (player->getMoney() >= this->rentInfo.cost) {
                 int buy;
                 cout << "是否購買 " << this->name << " (" << this->rentInfo.cost << "$) ? 0:no 1:yes\n";
-                cin >> buy;
+                if (this->getUserInput(buy) <= 0) return;
                 while ((buy != 0) && (buy != 1)) {
                     cout << "invalid input\n";
-                    cin >> buy;
+                    if (this->getUserInput(buy) <= 0) return;
                 }
                 if (buy == 1) {
                     player->pay(this->rentInfo.cost);
@@ -493,10 +490,10 @@ class Field {   // 格子
                 if (player->getMoney() >= this->rentInfo.houseCost) {
                     int buy;
                     cout << "是否在 " << this->name << ((this->house == 4) ? " 蓋旅館 (" : " 蓋房子 (") << this->rentInfo.houseCost << "$) ? 0:no 1:yes\n";
-                    cin >> buy;
+                    if (this->getUserInput(buy) <= 0) return;
                     while ((buy != 0) && (buy != 1)) {
                         cout << "invalid input\n";
-                        cin >> buy;
+                        if (this->getUserInput(buy) <= 0) return;
                     }
                     if (buy == 1) {
                         player->pay(this->rentInfo.houseCost);
@@ -590,6 +587,8 @@ class Field {   // 格子
         int siblingNum = 0; // 同顏色的地or車站的數量 for type 2, 3
         Field *siblings[3]; // 同顏色的地or車站 for type 2, 3
         RentInfo rentInfo = {0,0,0,0,0,0,0,0};
+        Gameboard *gameboard = nullptr;
+        int getUserInput(int &input);
 };
 
 
@@ -618,13 +617,13 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
             delete[] this->fields;
         }
         void setField(int num, int type, string name) {
-            this->fields[num] = Field(type, name);
+            this->fields[num] = Field(type, name, this);
         }
         void setField(int num, int type, string name, int tax) {
-            this->fields[num] = Field(type, name, tax);
+            this->fields[num] = Field(type, name, tax, this);
         }
         void setField(int num, int type, string name, int color, RentInfo rentInfo) {
-            this->fields[num] = Field(type, name, color, rentInfo);
+            this->fields[num] = Field(type, name, color, rentInfo, this);
         }
         Field* getField(int num) {
             return &(this->fields[num]);
@@ -651,7 +650,7 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
                         this->turnPlayer++;
                     }
                 } while (bankruptStat[this->turnPlayer]);
-                cout << "\n\n現在是 " << this->players[this->turnPlayer].getName() << " 的回合\n";
+                cout << "現在是 " << this->players[this->turnPlayer].getName() << " 的回合\n";
                 cout << "現在狀況: ";
                 for (int i = 0; i < this->playerNum; i++) {
                     if (this->bankruptStat[i] == 0) {
@@ -686,7 +685,11 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
         }
         void setBankrupt(int id) {
             this->bankruptStat[id] = 1;
-            cout << this->players[id].getName() << " 破產了\n";
+            for (int i = 0; i < 40; i++) {
+                if (this->fields[i].getOwner() == &(this->players[id])) {
+                    this->fields[i].sell();
+                }
+            }
         }
         void printTrunPlayerMove() {
             this->getTurnPlayer()->printMove();
@@ -697,8 +700,11 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
         void checkTurnPlayerPassStart() {
             this->checkPassStart(this->getTurnPlayer());
         }
-        int turnPlayerBankrupt() {
+        int isTurnPlayerBankrupt() {
             return this->bankruptStat[this->turnPlayer];
+        }
+        int isPlayerBankrupt(int id) {
+            return this->bankruptStat[id];
         }
         void samePlayerNextTurn() {
             this->sameTurnPlayer = 1;
@@ -760,6 +766,23 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
                 }
             }
         }
+        void turnPlayerTimeout() {
+            this->setBankrupt(this->turnPlayer);
+            cout << this->getTurnPlayer()->getName() << " 超時，已宣告破產\n";
+        }
+        void playerTimeout(int id) {
+            this->setBankrupt(id);
+            cout << this->players[id].getName() << " 超時，已宣告破產\n";
+        }
+        void turnPlayerLeave() {
+            this->setBankrupt(this->turnPlayer);
+            cout << this->getTurnPlayer()->getName() << " 已離開遊戲\n";
+        }
+        void playerLeave(int id) {
+            this->setBankrupt(id);
+            cout << this->players[id].getName() << " 已離開遊戲\n";
+        }
+        int getUserInput(int &input);
         void initGame () {
             // 0:Empty 1:起點 2:土地 3:車站 4:公共事業 5:機會 6:命運 7:入獄 8:監獄 9:稅
             // 0:brown 1:skyblue 2:pink 3:orange 4:red 5:yellow 6:green 7:blue
@@ -906,9 +929,17 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
 
 
 
-
+void Player::pay(int n) {
+    this->money -= n;
+    if ((this->money < 0) && !(this->gameboard->isPlayerBankrupt(this->id))) {
+        if (!(this->sellForMoney())) {
+            this->declareBankrupt();
+        }
+    }
+}
 void Player::declareBankrupt() {
     this->gameboard->setBankrupt(this->id);
+    cout << this->name << " 破產了\n";
 }
 void printPriceList(vector<Price> &v) {
     for (int i = 0; i < (int)(v.size()); i++) {
@@ -969,19 +1000,19 @@ int Player::sellForMoney() { // return 0:money not enough -> bankrupt  1:money n
         printPriceList(priceList);
         int fNum;
         cout << "選擇要販售的土地(編號): ";
-        cin >> fNum;
+        if (this->getUserInput(fNum) <= 0) return 1;
         while ((fNum <= 0) || (fNum > (int)(priceList.size()))) {
             cout << "invalid input\n";
-            cin >> fNum;
+            if (this->getUserInput(fNum) <= 0) return 1;
         }
         if (priceList[fNum-1].fieldType == 2) {
             if (priceList[fNum-1].house > 0) {
                 int onlyHouse;
                 cout << "只販售房屋? 0:no 1:yes :";
-                cin >> onlyHouse;
+                if (this->getUserInput(onlyHouse) <= 0) return 1;
                 while ((onlyHouse != 0) && (onlyHouse != 1)) {
                     cout << "invalid input\n";
-                    cin >> onlyHouse;
+                    if (this->getUserInput(onlyHouse) <= 0) return 1;
                 }
                 if (onlyHouse) {
                     int hNum;
@@ -991,7 +1022,7 @@ int Player::sellForMoney() { // return 0:money not enough -> bankrupt  1:money n
                         cout << "要販售的房屋數(1~" << priceList[fNum-1].house <<"): ";
                         while ((hNum <= 0) || (hNum > priceList[fNum-1].house)) {
                             cout << "invalid input\n";
-                            cin >> hNum;
+                            if (this->getUserInput(hNum) <= 0) return 1;
                         }
                     }
                     this->earn(priceList[fNum-1].housePrice * hNum);
@@ -1010,10 +1041,10 @@ int Player::sellForMoney() { // return 0:money not enough -> bankrupt  1:money n
             } else if (priceList[fNum-1].hotel > 0) {
                 int onlyHotel;
                 cout << "只販售旅館? 0:no 1:yes :";
-                cin >> onlyHotel;
+                if (this->getUserInput(onlyHotel) <= 0) return 1;
                 while ((onlyHotel != 0) && (onlyHotel != 1)) {
                     cout << "invalid input\n";
-                    cin >> onlyHotel;
+                    if (this->getUserInput(onlyHotel) <= 0) return 1;
                 }
                 if (onlyHotel) {
                     this->earn(priceList[fNum-1].housePrice * 5);
@@ -1298,7 +1329,7 @@ void Card::execute(Player *player) {
                     if (m > 20) {
                         m = 20;
                     }
-                    v[i]->payToPlayer(player, 20);
+                    v[i]->payToPlayer(player, m);
                 }
                 break;
             }
@@ -1350,25 +1381,67 @@ void Card::execute(Player *player) {
             
 }
 
-
-
+int Player::getUserInput(int &input) {
+    int n = scanf("%d", &input);
+    if (n <= 0) {
+        if (errno == EINTR) {
+            this->gameboard->playerTimeout(this->id);
+        } else if (n == EOF) {
+            this->gameboard->playerLeave(this->id);
+        } else {
+            this->gameboard->playerLeave(this->id);
+        }
+    }
+    return n;
+}
+int Field::getUserInput(int &input) {
+    int n = scanf("%d", &input);
+    if (n <= 0) {
+        if (errno == EINTR) {
+            this->gameboard->turnPlayerTimeout();
+        } else if (n == EOF) {
+            this->gameboard->turnPlayerLeave();
+        } else {
+            this->gameboard->turnPlayerLeave();
+        }
+    }
+    return n;
+}
+int Gameboard::getUserInput(int &input) {
+    cout << "\t\t>> ";
+    int n = scanf("%d", &input);
+    if (n <= 0) {
+        if (errno == EINTR) {
+            this->turnPlayerTimeout();
+        } else if (n == EOF) {
+            this->turnPlayerLeave();
+        } else {
+            this->turnPlayerLeave();
+        }
+    }
+    return n;
+}
 
 void game(WaitingRoom *room) {
     Gameboard board = Gameboard(room);
 
     int command;
     int turnNum = 1;
-    while (cin.good()) {
-
-        cin >> command;
+    Signal(SIGALRM, sig_alrm);
+    while (true) {
+        alarm(10);
         //board.setBankrupt(command);
-        cout << "Turn " << turnNum++ << "\n";
+        cout << "\n\n\n\n- - - - - - - - - - - - - Turn " << turnNum++ << " - - - - - - - - - - - - -\n\n";
         board.nextTurn();
+        if (board.getUserInput(command) <= 0) goto TurnEnd;
         if (board.getTurnPlayer()->isInJail()) {
             board.getField(10)->execute(board.getTurnPlayer());
+            if (board.getUserInput(command) <= 0) goto TurnEnd;
             if (board.getTurnPlayer()->isInJail()) {
+                if (board.getUserInput(command) <= 0) goto TurnEnd;
                 continue;
             } else {
+                if (board.getUserInput(command) <= 0) goto TurnEnd;
                 board.getTurnPlayer()->move(board.getTurnPlayer()->getLastMove());
             }
         } else {
@@ -1380,8 +1453,12 @@ void game(WaitingRoom *room) {
         }
         board.printTrunPlayerMove();
         board.checkTurnPlayerPassStart();
+        if (board.getUserInput(command) <= 0) goto TurnEnd;
         board.turnPlayerTriggerField();
+        if (board.getUserInput(command) <= 0) goto TurnEnd;
 
+TurnEnd:
+        alarm(0);
         board.checkEnd();
         if ((board.isEnded()) || (command == -1)) {
             break;
@@ -1406,4 +1483,5 @@ int main () {
     srand(42); // for test
     WaitingRoom room = {3, {"Explosion0w0", "kwkwkwkak", "LIAN26880912"}, {3000, 3001, 3002}}; // for test
     game(&room);
+    
 }
