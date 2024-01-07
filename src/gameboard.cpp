@@ -30,6 +30,8 @@ using namespace std;
 
 class Gameboard;
 class Player;
+class Field;
+
 
 struct WaitingRoom {
     int playerNum;
@@ -40,22 +42,6 @@ struct WaitingRoom {
 
 
 class Card {    // 機會 or 命運卡
-    /*
-        目前想法：
-            賺錢
-            付錢
-            入獄
-            免刑卡（可保留）
-            今天我生日（向所有人收錢）
-            對所有人付錢
-            共產主義當道（所有人現金平分）
-            往前走指定步數
-            移動到特定地點（起點、最近的公營事業or車站、最貴的那塊地...）
-            指定骰子步數（可保留，之後擲骰前用）
-            免付過路費1次（可保留）
-            拆房子
-            根據房屋數量繳稅
-    */
     public:
         Card(): cardType(0), effect(0), keep(0), desciption("一張卡") {}
         Card(int cardType, int effect, int keep, string descr): cardType(cardType), effect(effect), keep(keep), desciption(descr) {}
@@ -65,12 +51,12 @@ class Card {    // 機會 or 命運卡
     private:
         int cardType = 0; // 0:機會 1:命運
         int effect = 0; // 0:Empty
-        int keep = 0; // 0:不可保留 1:可保留
+        int keep = 0; // 0:不可保留 1:no jail 2:no rent
         string desciption = "一張卡";
 };
 
-#define CHANCE_CARD_TYPE_NUM 3
-#define DESTINY_CARD_TYPE_NUM 3
+#define CHANCE_CARD_TYPE_NUM 20
+#define DESTINY_CARD_TYPE_NUM 20
 
 Card randCard(int cardType) {
     int effect = 0;
@@ -82,16 +68,68 @@ Card randCard(int cardType) {
         effect += 1;
         switch (effect) {
             case 1:
-                descr = "第一種命運，不可保留";
+                descr = "剛買的豆花掉到地上，損失30$";
                 break;
             case 2:
-                descr = "第二種命運，不可保留";
+                descr = "走在路上被流彈擊中，醫藥費150$";
                 break;
             case 3:
-                descr = "第三種命運，可保留";
+                descr = "推倒資本主義的高牆，所有人現金平分";
+                break;
+            case 4:
+                descr = "颱風肆虐，將鐵皮屋整棟吹飛，隨機損失1棟房屋";
+                break;
+            case 5:
+                descr = "車子掉進天坑，維修費100$";
+                break;
+            case 6:
+                descr = "大哥販毒被抓，成為替罪羔羊，入獄";
+                break;
+            case 7:
+                descr = "抓到當紅男星與女友密會，索取封口費50$";
+                break;
+            case 8:
+                descr = "參選期間被抓到老家違建，隨機損失1棟房屋";
+                break;
+            case 9:
+                descr = "在農地上種光電，每持有一塊地獲得15$";
+                break;
+            case 10:
+                descr = "國際情勢緊張，被迫購買軍火，由全民買單，所有人繳最多50$(除了回合玩家以外，最多繳到沒有現金)";
+                break;
+            case 11:
+                descr = "發生規模9.0強震，地圖上隨機一塊地上房屋全毀 (所有土地都有可能)";
+                break;
+            case 12:
+                descr = "投胎投得好，父親身為建商，與執政黨合作多年，出事了有老爸罩 (免刑1次，可保留)";
                 keep = 1;
                 break;
+            case 13:
+                descr = "慘遭投資詐騙，血本無歸，損失200$";
+                break;
+            case 14:
+                descr = "揭露遊戲公司廣告不實，被告侵害名譽，律師費50$";
+                break;
+            case 15:
+                descr = "下雨忘記帶傘，去便利商店買一把20$";
+                break;
+            case 16:
+                descr = "施工不慎造成停電，對所有人支付賠償金20$";
+                break;
+            case 17:
+                descr = "台電連年虧損，電價上漲，移動到台灣電力公司並支付電費";
+                break;
+            case 18:
+                descr = "代表國家參加奧運，為國爭光，獲得獎金200$";
+                break;
+            case 19:
+                descr = "過年打麻將連敗，付給隨機一位玩家50$";
+                break;
+            case 20:
+                descr = "當黃牛被檢舉，罰款100$";
+                break;
             default:
+                descr = "在演藝圈闖出名號，開始被狗仔跟蹤 (你不該看到這張卡，如果看到了，請回報bug)";
                 break;
         }
         
@@ -101,16 +139,69 @@ Card randCard(int cardType) {
         effect += 1;
         switch (effect) {
             case 1:
-                descr = "第一種機會，可保留";
-                keep = 1;
+                descr = "在新竹棒球場發現大秘寶，獲得100$";
                 break;
             case 2:
-                descr = "第二種機會，不可保留";
+                descr = "發現違規停車，獲得檢舉獎金50$";
                 break;
             case 3:
-                descr = "第三種機會，不可保留";
+                descr = "街頭演出獲得打賞50$";
+                break;
+            case 4:
+                descr = "車子被拖吊，往前走3步";
+                break;
+            case 5:
+                descr = "銀行發放利息，每持有100$獲得5$";
+                break;
+            case 6:
+                descr = "路上被強迫推銷愛心筆，損失50$";
+                break;
+            case 7:
+                descr = "轉賣高人氣的寶口夢卡牌，收入200$";
+                break;
+            case 8:
+                descr = "被黑道誤認為是仇家，車子被砸，維修費100$";
+                break;
+            case 9:
+                descr = "乘坐普悠瑪號旅行，移動到最近的車站";
+                break;
+            case 10:
+                descr = "跨年到101看煙火，移動到台北";
+                break;
+            case 11:
+                descr = "當詐騙集團車手被抓，入獄";
+                break;
+            case 12:
+                descr = "結識地方派系大佬，出事了有大哥罩 (免刑1次，可保留)";
+                keep = 1;
+                break;
+            case 13:
+                descr = "今天我生日，向所有玩家索取最多20$ (其他玩家最多支付到沒有現金)";
+                break;
+            case 14:
+                descr = "過年返鄉，移動到最近的所有地 (如果沒有的話就移動到起點)";
+                break;
+            case 15:
+                descr = "囤房稅2.0上線，每持有一棟房屋繳1$，每持有一棟旅館繳5$";
+                break;
+            case 16:
+                descr = "獲得租金補貼(免繳過路費1次，可保留)";
+                keep = 2;
+                break;
+            case 17:
+                descr = "刮刮樂中獎，獲得200$";
+                break;
+            case 18:
+                descr = "發票中獎，獲得100$";
+                break;
+            case 19:
+                descr = "公司賺錢，老闆加薪，獲得10$";
+                break;
+            case 20:
+                descr = "出門旅遊住民宿被當盤子，損失150$";
                 break;
             default:
+                descr = "揭露官商勾結，被查水表 (你不該看到這張卡，如果看到了，請回報bug)";
                 break;
         }
     }
@@ -152,8 +243,24 @@ class Player {
         }
         void useCard(int n) {
             this->cards[n].execute(this);
-            this->cards[n] = this->cards[this->cards.size()];
+            this->cards[n] = this->cards[this->cards.size()-1];
             this->cards.pop_back();
+        }
+        int getNoJailCard() {   // return location in cards if exist, -1 otherwise
+            for (int i = 0; i < (int)(this->cards.size()); i++) {
+                if (this->cards[i].canKeep() == 1) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+        int getNoRentCard() {   // return location in cards if exist, -1 otherwise
+            for (int i = 0; i < (int)(this->cards.size()); i++) {
+                if (this->cards[i].canKeep() == 2) {
+                    return i;
+                }
+            }
+            return -1;
         }
         int getId() const {return this->id;}
         string getName() const {return this->name;}
@@ -165,7 +272,7 @@ class Player {
         void move(Dice dice) {
             this->lastMove = dice;
             this->position += dice.d1 + dice.d2;
-            if (this->position >39) {
+            if (this->position > 39) {
                 this->position %= 40;
                 this->passedStart = 1;
             }
@@ -189,10 +296,15 @@ class Player {
             this->pay(n);
         }
         void sendToJail() {
-            this->inJail = 1;
-            this->lastMove = {(this->position + 10)%40, 0};
-            this->position = 10;
-            cout << this->name << " 被關進監獄了，剩餘 3 回合\n";
+            int num = this->getNoJailCard();
+            if (num >= 0) {
+                this->useCard(num);
+            } else {
+                this->inJail = 1;
+                this->lastMove = {(this->position + 10)%40, 0};
+                this->position = 10;
+                cout << this->name << " 被關進監獄了，剩餘 3 回合\n";
+            }
         }
         void tryEscapeJail() {
             if (this->inJail >= 3) {
@@ -216,6 +328,15 @@ class Player {
         void declareBankrupt();
         int sellForMoney();
         int getPriceList (vector<Price> &v); // return 可以賣的東西的總價
+        void demolishRandHouse();
+        void printMove();
+        void triggerCurrentField();
+        void checkPassStart();
+        void getOtherLivePlayers(vector<Player*> &v);
+        int getNearestOwnFieldDistance();
+        int getHouseNum();
+        int getFieldNum();
+        void earthquake();
     private:
         int id;
         string name;
@@ -269,29 +390,47 @@ class Field {   // 格子
                         player->resetPassedStart();
                     }
                     break;
-                case 2:
+                case 2: {
                     if (this->owner == nullptr) {
                         checkBuy(player);
                     } else if (this->owner == player) {
                         checkBuildHouse(player);
                     } else {
-                        player->payToPlayer(this->owner, this->calcRent());
+                        int num = player->getNoRentCard();
+                        if (num >= 0) {
+                            player->useCard(num);
+                        } else {
+                            player->payToPlayer(this->owner, this->calcRent());
+                        }
                     }
                     break;
-                case 3:
+                }
+                case 3: {
                     if (this->owner == nullptr) {
                         checkBuy(player);
                     } else if (this->owner != player) {
-                        player->payToPlayer(this->owner, this->calcRailwayRent());
+                        int num = player->getNoRentCard();
+                        if (num >= 0) {
+                            player->useCard(num);
+                        } else {
+                            player->payToPlayer(this->owner, this->calcRailwayRent());
+                        }
                     }
                     break;
-                case 4:
+                }
+                case 4: {
                     if (this->owner == nullptr) {
                         checkBuy(player);
                     } else if (this->owner != player) {
-                        player->payToPlayer(this->owner, this->calcUtilityRent(player));
+                        int num = player->getNoRentCard();
+                        if (num >= 0) {
+                            player->useCard(num);
+                        } else {
+                            player->payToPlayer(this->owner, this->calcUtilityRent(player));
+                        }
                     }
                     break;
+                }
                 case 5: {
                     Card card = randCard(0);
                     cout << player->getName() << "抽到 \"" << card.getDesciption() << "\"\n";
@@ -434,6 +573,9 @@ class Field {   // 格子
         }
         void demolish(int n) {
             this->house -= n;
+            if (this->house < 0) {
+                this->house = 0;
+            }
         }
         void sell() {
             this->owner = nullptr;
@@ -547,63 +689,151 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
             cout << this->players[id].getName() << " 破產了\n";
         }
         void printTrunPlayerMove() {
-            Dice lastMove = this->getTurnPlayer()->getLastMove();
-            cout << this->getTurnPlayer()->getName() << " 走了 " << lastMove.d1 + lastMove.d2 << " 步，來到 " << this->fields[this->getTurnPlayer()->getPosition()].getName() << "\n";
+            this->getTurnPlayer()->printMove();
         }
-        void checkPassStart() {
-            this->fields[0].execute(this->getTurnPlayer());
+        void checkPassStart(Player *player) {
+            this->fields[0].execute(player);
+        }
+        void checkTurnPlayerPassStart() {
+            this->checkPassStart(this->getTurnPlayer());
         }
         int turnPlayerBankrupt() {
             return this->bankruptStat[this->turnPlayer];
         }
-
         void samePlayerNextTurn() {
             this->sameTurnPlayer = 1;
         }
-
+        void getLivePlayers(vector<Player*> &v) {
+            v.clear();
+            for (int i = 0; i < this->playerNum; i++) {
+                if (this->bankruptStat[i] == 0) {
+                    v.push_back(&(this->players[i]));
+                }
+            }
+        }
+        void getOtherLivePlayers(Player *player, vector<Player*> &v) {
+            v.clear();
+            for (int i = 0; i < this->playerNum; i++) {
+                if ((this->bankruptStat[i] == 0) && (&(this->players[i]) != player)) {
+                    v.push_back(&(this->players[i]));
+                }
+            }
+        }
+        void getFieldOwnedByPlayer(Player *player, vector<Field*> &v) {
+            v.clear();
+            for (int i = 0; i < 40; i++) {
+                int fType = this->fields[i].getType();
+                if ((fType >= 2) && (fType <= 4)) {
+                    if (this->fields[i].getOwner() == player) {
+                        v.push_back(&(this->fields[i]));
+                    }
+                }
+            }
+        }
+        void turnPlayerTriggerField() {
+            this->getTurnPlayer()->triggerCurrentField();
+        }
+        int getNearestOwnFieldDistance(Player *player) { // return the distance
+            int move = 0;
+            int p = player->getPosition();
+            for (int i = p; i < p+40; i++) {
+                if (this->fields[i].getOwner() == player) {
+                    move = i-p;
+                    break;
+                }
+            }
+            return move;
+        }
+        void earthquake() {
+            int r = rand() % 22;
+            for (int i = 0; i < 40; i++) {
+                if (this->fields[i].getType() == 2) {
+                    if (r-- == 1) {
+                        int n = this->fields[i].getHouse();
+                        if (n > 0) {
+                            this->fields[i].demolish(n);
+                            cout << this->fields[i].getName() << " 發生地震，所有房屋都被震毀了\n";
+                        } else {
+                            cout << this->fields[i].getName() << " 發生地震，所幸沒有房屋被震毀\n";
+                        }
+                    }
+                }
+            }
+        }
         void initGame () {
             // 0:Empty 1:起點 2:土地 3:車站 4:公共事業 5:機會 6:命運 7:入獄 8:監獄 9:稅
             // 0:brown 1:skyblue 2:pink 3:orange 4:red 5:yellow 6:green 7:blue
+            /*
+                台北    87.77
+                新北    48.84
+
+                桃園    32.40
+                竹市    42.02
+                新竹    41.10
+
+                台中    37.51
+                彰化    26.09
+                南投    22.84
+
+                雲林    20.03
+                嘉義    24.58
+                嘉市    20.36
+
+                台南    29.74
+                高雄    28.54
+                屏東    18.30
+
+                宜蘭    24.86
+                花蓮    22.91
+                台東    17.30
+
+                連江    23.27
+                金門    23.20
+                澎湖    18.26
+
+                苗栗    27.65
+                基隆    24.43
+            */
             this->setField(0, 1, "起點");
-            this->setField(1, 2, "Brown 1", 0, {60,2,10,30,90,160,250,50});
+            this->setField(1, 2, "基隆市", 0, {60,2,10,30,90,160,250,50});
             this->setField(2, 6, "命運");
-            this->setField(3, 2, "Brown 2", 0, {60,4,20,60,180,320,450,50});
+            this->setField(3, 2, "苗栗國(縣)", 0, {60,4,20,60,180,320,450,50});
             this->setField(4, 9, "所得稅", 200);
-            this->setField(5, 3, "Train 1", 0, {200,25,50,100,200,0,0,0});
-            this->setField(6, 2, "Skyblue 1", 1, {100,6,30,90,270,400,550,50});
+            this->setField(5, 3, "臺東火車站", 0, {200,25,50,100,200,0,0,0});
+            this->setField(6, 2, "澎湖縣", 1, {100,6,30,90,270,400,550,50});
             this->setField(7, 5, "機會");
-            this->setField(8, 2, "Skyblue 2", 1, {100,6,30,90,270,400,550,50});
-            this->setField(9, 2, "Skyblue 3", 1, {120,8,40,100,300,450,600,50});
-            this->setField(10, 8, "監獄");
-            this->setField(11, 2, "Pink 1", 2, {140,10,50,150,450,625,750,100});
-            this->setField(12, 4, "電力公司", 0, {150,4,10,0,0,0,0,0});
-            this->setField(13, 2, "Pink 2", 2, {140,10,50,150,450,625,750,100});
-            this->setField(14, 2, "Pink 3", 2, {160,12,60,180,500,700,900,100});
-            this->setField(15, 3, "Train 2", 0, {200,25,50,100,200,0,0,0});
-            this->setField(16, 2, "Orange 1", 3, {180,14,70,200,550,750,950,100});
+            this->setField(8, 2, "金門縣", 1, {100,6,30,90,270,400,550,50});
+            this->setField(9, 2, "連江縣", 1, {120,8,40,100,300,450,600,50});
+            this->setField(10, 8, "綠島監獄");
+            this->setField(11, 2, "臺東縣", 2, {140,10,50,150,450,625,750,100});
+            this->setField(12, 4, "台灣電力公司", 0, {150,4,10,0,0,0,0,0});
+            this->setField(13, 2, "花蓮縣", 2, {140,10,50,150,450,625,750,100});
+            this->setField(14, 2, "宜蘭縣", 2, {160,12,60,180,500,700,900,100});
+            this->setField(15, 3, "臺南火車站", 0, {200,25,50,100,200,0,0,0});
+            this->setField(16, 2, "屏東縣", 3, {180,14,70,200,550,750,950,100});
             this->setField(17, 6, "命運");
-            this->setField(18, 2, "Orange 2", 3, {180,14,70,200,550,750,950,100});
-            this->setField(19, 2, "Orange 3", 3, {200,16,80,220,600,800,1000,100});
+            this->setField(18, 2, "高雄市", 3, {180,14,70,200,550,750,950,100});
+            this->setField(19, 2, "臺南市", 3, {200,16,80,220,600,800,1000,100});
             this->setField(20, 0, "免費停車");
-            this->setField(21, 2, "Red 1", 4, {220,18,90,250,700,875,1050,150});
+            this->setField(21, 2, "嘉義市", 4, {220,18,90,250,700,875,1050,150});
             this->setField(22, 5, "機會");
-            this->setField(23, 2, "Red 2", 4, {220,18,90,250,700,875,1050,150});
-            this->setField(24, 2, "Red 3", 4, {240,20,100,300,750,925,1100,150});
-            this->setField(25, 3, "Train 3", 0, {200,25,50,100,200,0,0,0});
-            this->setField(26, 2, "Yellow 1", 5, {260,22,110,330,800,975,1150,150});
-            this->setField(27, 2, "Yellow 2", 5, {260,22,110,330,800,975,1150,150});
-            this->setField(28, 4, "自來水公司", 0, {150,4,10,0,0,0,0,0});
-            this->setField(29, 2, "Yellow 3", 5, {280,24,120,360,850,1025,1200,150});
+            this->setField(23, 2, "嘉義縣", 4, {220,18,90,250,700,875,1050,150});
+            this->setField(24, 2, "雲林縣", 4, {240,20,100,300,750,925,1100,150});
+            this->setField(25, 3, "臺中火車站", 0, {200,25,50,100,200,0,0,0});
+            this->setField(26, 2, "南投縣", 5, {260,22,110,330,800,975,1150,150});
+            this->setField(27, 2, "彰化縣", 5, {260,22,110,330,800,975,1150,150});
+            this->setField(28, 4, "台灣自來水公司", 0, {150,4,10,0,0,0,0,0});
+            this->setField(29, 2, "臺中市", 5, {280,24,120,360,850,1025,1200,150});
             this->setField(30, 7, "入獄");
-            this->setField(31, 2, "Green 1", 6, {300,26,130,390,900,1100,1275,200});
-            this->setField(32, 2, "Green 2", 6, {300,26,130,390,900,1100,1275,200});
+            this->setField(31, 2, "新竹縣", 6, {300,26,130,390,900,1100,1275,200});
+            this->setField(32, 2, "新竹市", 6, {300,26,130,390,900,1100,1275,200});
             this->setField(33, 6, "命運");
-            this->setField(34, 2, "Green 3", 6, {320,28,150,450,1000,1200,1400,200});
-            this->setField(35, 3, "Train 4", 0, {200,25,50,100,200,0,0,0});
+            this->setField(34, 2, "桃園市", 6, {320,28,150,450,1000,1200,1400,200});
+            this->setField(35, 3, "臺北火車站", 0, {200,25,50,100,200,0,0,0});
             this->setField(36, 5, "機會");
-            this->setField(37, 2, "Blue 1", 7, {350,35,175,500,1100,1300,1500,200});
+            this->setField(37, 2, "新北市", 7, {350,35,175,500,1100,1300,1500,200});
             this->setField(38, 9, "奢侈稅", 100);
-            this->setField(39, 2, "Blue 2", 7, {400,50,200,600,1400,1700,2000,200});
+            this->setField(39, 2, "臺北市", 7, {400,50,200,600,1400,1700,2000,200});
 
             this->fields[1].setSibling(&(this->fields[3]));
             this->fields[3].setSibling(&(this->fields[1]));
@@ -663,11 +893,10 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
             this->fields[28].setSibling(&(this->fields[12]));
     
         }
-        
     private:
         int playerNum;
         Player *players;
-        int *bankruptStat;
+        int *bankruptStat; // 0:alive 1:bankrupt
         Field *fields;
         int turnPlayer = -1;
         int end = 0;
@@ -681,8 +910,6 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
 void Player::declareBankrupt() {
     this->gameboard->setBankrupt(this->id);
 }
-
-
 void printPriceList(vector<Price> &v) {
     for (int i = 0; i < (int)(v.size()); i++) {
         if (v[i].fieldType == 2) {
@@ -726,10 +953,13 @@ int Player::getPriceList (vector<Price> &v) {
     }
     return sum;
 }
-
-
-
-int Player::sellForMoney() {
+void Player::printMove() {
+    cout << this->name << " 走了 " << this->lastMove.d1 + this->lastMove.d2 << " 步，來到 " << this->gameboard->getField(this->position)->getName() << "\n";
+}
+void Player::triggerCurrentField() {
+    this->gameboard->getField(this->position)->execute(this);
+}
+int Player::sellForMoney() { // return 0:money not enough -> bankrupt  1:money no more negative
     vector<Price> priceList = vector<Price>();
     if ((this->money <= 0) && (this->getPriceList(priceList) <= -this->money)) {
         return 0;
@@ -821,30 +1051,299 @@ int Player::sellForMoney() {
 
     return 1;
 }
+void Player::demolishRandHouse() {
+    vector<Field*> v = vector<Field*>();
+    this->gameboard->getFieldOwnedByPlayer(this, v);
+    vector<Field*> f = vector<Field*>();
+    for (int i = 0; i < (int)(v.size()); i++) {
+        if ((v[i]->getType() == 2) && (v[i]->getHouse() > 0)) {
+            f.push_back(v[i]);
+        }
+    }
+    if (f.size() > 0) {
+        int r = rand() % (int)(f.size());
+        if (f[r]->getHouse() == 5) {
+            f[r]->demolish(5);
+            cout << f[r]->getName() << " 的旅館被拆除了\n";
+        } else {
+            f[r]->demolish(1);
+            cout << f[r]->getName() << " 的房屋被拆除了\n";
+        }
+    } else {
+        cout << "沒有任何房屋被拆除\n";
+    }
+}
+void Player::checkPassStart() {
+    this->gameboard->checkPassStart(this);
+}
+void Player::getOtherLivePlayers(vector<Player*> &v) {
+    this->gameboard->getOtherLivePlayers(this, v);
+}
+int Player::getNearestOwnFieldDistance() {
+    return this->gameboard->getNearestOwnFieldDistance(this);
+}
+int Player::getHouseNum() { // hotel as 5
+    vector<Field*> v = vector<Field*>();
+    this->gameboard->getFieldOwnedByPlayer(this, v);
+    int num = 0;
+    for (int i = 0; i < (int)(v.size()); i++) {
+        if ((v[i]->getType() == 2)) {
+            num += v[i]->getHouse();
+        }
+    }
+    return num;
+}
+int Player::getFieldNum() { // hotel as 5
+    vector<Field*> v = vector<Field*>();
+    this->gameboard->getFieldOwnedByPlayer(this, v);
+    return (int)(v.size());
+}
+void Player::earthquake() {
+    this->gameboard->earthquake();
+}
+
 
 void Card::execute(Player *player) {
     if (this->cardType) {
         switch (this->effect) {
             // 命運
             case 1:
+                // "剛買的豆花掉到地上，損失30$";
+                player->pay(30);
                 break;
             case 2:
+                // "走在路上被流彈擊中，醫藥費150$";
+                player->pay(150);
                 break;
-            case 3:
+            case 3: {
+                // "推倒資本主義的高牆，所有人現金平分";
+                int sum = 0;
+                sum += player->getMoney();
+                player->pay(player->getMoney());
+                vector<Player*> v = vector<Player*>();
+                player->getOtherLivePlayers(v);
+                for (int i = 0; i < (int)(v.size()); i++) {
+                    int m = v[i]->getMoney();
+                    sum += m;
+                    v[i]->pay(m);
+                }
+                int avr = sum / ((int)(v.size()) + 1);
+                player->earn(avr);
+                break;
+            }
+            case 4:
+                // "颱風肆虐，將鐵皮屋整棟吹飛，隨機損失1棟房屋";
+                player->demolishRandHouse();
+                break;
+            case 5:
+                // "車子掉進天坑，維修費100$";
+                player->pay(100);
+                break;
+            case 6:
+                // "大哥販毒被抓，成為替罪羔羊，入獄";
+                player->sendToJail();
+                break;
+            case 7:
+                // "抓到當紅男星與女友密會，索取封口費50$";
+                player->earn(50);
+                break;
+            case 8:
+                // "參選期間被抓到老家違建，隨機損失1棟房屋";
+                player->demolishRandHouse();
+                break;
+            case 9: {
+                // "在農地上種光電，每持有一塊地獲得15$";
+                int num = player->getFieldNum();
+                num *= 15;
+                cout << "總共獲得 " << num << "$\n";
+                player->earn(num);
+                break;
+            }
+            case 10: {
+                // "國際情勢緊張，被迫購買軍火，由全民買單，所有人繳最多50$ (除了回合玩家以外，最多繳到沒有現金)";
+                vector<Player*> v = vector<Player*>();
+                player->getOtherLivePlayers(v);
+                for (int i = 0; i < (int)(v.size()); i++) {
+                    int m = v[i]->getMoney();
+                    if (m > 50) {
+                        m = 50;
+                    }
+                    v[i]->pay(m);
+                }
+                player->pay(50);
+                break;
+            }
+            case 11:
+                // "發生規模9.0強震，地圖上隨機一塊地上房屋全毀 (所有土地都有可能)";
+                player->earthquake();
+                break;
+            case 12:
+                // "投胎投得好，父親身為建商，與執政黨合作多年，出事了有老爸罩 (免刑1次，可保留)";
+                cout << player->getName() << " 靠關係在外役監待了1天就出來了\n";
+                break;
+            case 13:
+                // "慘遭投資詐騙，血本無歸，損失200$";
+                player->pay(200);
+                break;
+            case 14:
+                // "揭露遊戲公司廣告不實，被告侵害名譽，律師費50$";
+                player->pay(50);
+                break;
+            case 15:
+                // "下雨忘記帶傘，去便利商店買一把20$";
+                player->pay(20);
+                break;
+            case 16: {
+                // "施工不慎造成停電，對所有人支付賠償金20$";
+                vector<Player*> v = vector<Player*>();
+                player->getOtherLivePlayers(v);
+                for (int i = 0; i < (int)(v.size()); i++) {
+                    player->payToPlayer(v[i], 20);
+                }
+                break;
+            }
+            case 17:
+                // "台電連年虧損，電價上漲，移動到台灣電力公司並支付電費";
+                player->move({(52-player->getPosition())%40,0});
+                player->printMove();
+                player->checkPassStart();
+                player->triggerCurrentField();
+                break;
+            case 18:
+                // "代表國家參加奧運，為國爭光，獲得獎金200$";
+                player->earn(200);
+                break;
+            case 19: {
+                // "過年打麻將連敗，付給隨機一位玩家50$";
+                vector<Player*> v = vector<Player*>();
+                player->getOtherLivePlayers(v);
+                if (v.size() > 0) {
+                    int n = rand() % (int)(v.size());
+                    player->payToPlayer(v[n], 50);
+                    break;
+                }
+            }
+            case 20:
+                // "當黃牛被檢舉，罰款100$";
+                player->pay(100);
                 break;
             default:
+                // "在演藝圈闖出名號，開始被狗仔跟蹤 (你不該看到這張卡，如果看到了，請回報bug)";
                 break;
         }
     } else {
         // 機會
         switch (this->effect) {
             case 1:
+                // "在新竹棒球場發現大秘寶，獲得100$";
+                player->earn(100);
                 break;
             case 2:
+                // "發現違規停車，獲得檢舉獎金50$";
+                player->earn(50);
                 break;
             case 3:
+                // "街頭演出獲得打賞50$";
+                player->earn(50);
+                break;
+            case 4:
+                // "車子被拖吊，往前走3步";
+                player->move({3,0});
+                player->printMove();
+                player->triggerCurrentField();
+                break;
+            case 5: 
+                // "銀行發放利息，每持有100$獲得5$";
+                player->earn((player->getMoney() / 100) * 5);
+                break;
+            case 6:
+                // "路上被強迫推銷愛心筆，損失50$";
+                player->pay(50);
+                break;
+            case 7:
+                // "轉賣高人氣的寶口夢卡牌，收入200$";
+                player->earn(200);
+                break;
+            case 8:
+                // "被黑道誤認為是仇家，車子被砸，維修費100$";
+                player->pay(100);
+                break;
+            case 9:
+                // "乘坐普悠瑪號旅行，移動到最近的車站";
+                player->move({(45-player->getPosition())%10,0});
+                player->printMove();
+                player->checkPassStart();
+                player->triggerCurrentField();
+                break;
+            case 10:
+                // "跨年到101看煙火，移動到台北";
+                player->move({(39-player->getPosition()),0});
+                player->printMove();
+                player->triggerCurrentField();
+                break;
+            case 11:
+                // "當詐騙集團車手被抓，入獄";
+                player->sendToJail();
+                break;
+            case 12:
+                // "結識地方派系大佬，出事了有大哥罩 (免刑1次，可保留)";
+                cout << player->getName() << " 受到地方派系大佬的保護，嫁禍給代罪羔羊\n";
+                break;
+            case 13: {
+                // "今天我生日，向所有玩家索取最多20$ (其他玩家最多支付到沒有現金)";
+                vector<Player*> v = vector<Player*>();
+                player->getOtherLivePlayers(v);
+                for (int i = 0; i < (int)(v.size()); i++) {
+                    int m = v[i]->getMoney();
+                    if (m > 20) {
+                        m = 20;
+                    }
+                    v[i]->payToPlayer(player, 20);
+                }
+                break;
+            }
+            case 14: {
+                // "過年返鄉，移動到最近的所有地 (如果沒有的話就移動到起點)";
+                int d = player->getNearestOwnFieldDistance();
+                if (d == 0) {
+                    player->move({(40-player->getPosition())%40,0});
+                } else {
+                    player->move({d,0});
+                }
+                player->printMove();
+                player->checkPassStart();
+                player->triggerCurrentField();
+                break;
+            }
+            case 15: {
+                // "囤房稅2.0上線，每持有一棟房屋繳1$，每持有一棟旅館繳5$";
+                int num = player->getHouseNum();
+                cout << "總共須繳 " << num << "$\n";
+                player->pay(num);
+                break;
+            }
+            case 16:
+                // "獲得租金補貼 (免繳過路費1次，可保留)";
+                cout << "租金補貼已入帳， " << player->getName() << " 免付過路費一次\n";
+                break;
+            case 17:
+                // "刮刮樂中獎，獲得200$";
+                player->earn(200);
+                break;
+            case 18:
+                // "發票中獎，獲得100$";
+                player->earn(100);
+                break;
+            case 19:
+                // "公司賺錢，老闆加薪，獲得10$";
+                player->earn(10);
+                break;
+            case 20:
+                // "出門旅遊住民宿被當盤子，損失150$";
+                player->pay(150);
                 break;
             default:
+                // "揭露官商勾結，被查水表 (你不該看到這張卡，如果看到了，請回報bug)";
                 break;
         }
     }
@@ -858,10 +1357,12 @@ void game(WaitingRoom *room) {
     Gameboard board = Gameboard(room);
 
     int command;
+    int turnNum = 1;
     while (cin.good()) {
 
         cin >> command;
         //board.setBankrupt(command);
+        cout << "Turn " << turnNum++ << "\n";
         board.nextTurn();
         if (board.getTurnPlayer()->isInJail()) {
             board.getField(10)->execute(board.getTurnPlayer());
@@ -878,8 +1379,8 @@ void game(WaitingRoom *room) {
             }
         }
         board.printTrunPlayerMove();
-        board.checkPassStart();
-        board.getField(board.getTurnPlayer()->getPosition())->execute(board.getTurnPlayer());
+        board.checkTurnPlayerPassStart();
+        board.turnPlayerTriggerField();
 
         board.checkEnd();
         if ((board.isEnded()) || (command == -1)) {
@@ -902,7 +1403,6 @@ int main () {
         seed = (unsigned int)time(NULL);
         srand(seed);
     */
-
     srand(42); // for test
     WaitingRoom room = {3, {"Explosion0w0", "kwkwkwkak", "LIAN26880912"}, {3000, 3001, 3002}}; // for test
     game(&room);

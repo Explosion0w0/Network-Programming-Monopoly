@@ -9,7 +9,7 @@ gameboard:	gameboard.cpp
 		g++ ${CFLAGS} gameboard.cpp -o ../bin/gameboard ${LIBS}
 
 testcli:	testcli.cpp
-		g++  ${CFLAGS} testcli.cpp `wx-config --cxxflags --libs std` -o ../bin/testcli ${LIBS} 
+		g++  ${CFLAGS} testcli.cpp `wx-config --cxxflags --libs std` -o ../bin/testcli ${LIBS}
 
 	
 #testcli:	testcli.c
