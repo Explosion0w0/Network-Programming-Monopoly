@@ -599,7 +599,7 @@ MyFrame::MyFrame(const wxString& title, const wxPoint& pos, const wxSize& size, 
     bzero(&playerLocations, sizeof(playerLocations));
     bzero(&propertyState, sizeof(propertyState));
 
-    balance = 1500;
+    balance = INIT_BALANCE;
     pendingRoll1 = pendingRoll2 = 0;
 
     DoStartThread();
