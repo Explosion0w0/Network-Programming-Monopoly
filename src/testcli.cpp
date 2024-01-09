@@ -30,7 +30,7 @@ vector<string> eventPrefixes = {"move ", "build ", "log ", "balance ", "roll", "
 
 //usage: (split commands with /, for example: move 3 7/log player 3 moved for 7 steps)
 //       move playerId steps    (moves playerId for a number of steps)
-//       build propertyId       (upgrades property at propertyId by 1 level)
+//       build propertyId diff  (upgrades or downgrades property at propertyId by diff level)
 //       log message            (displays message in the text box)
 //       balance number         (if number is negative, number will be deducted from balance)
 //       roll                   (client will return OK to server once button is clicked)
@@ -38,11 +38,11 @@ vector<string> eventPrefixes = {"move ", "build ", "log ", "balance ", "roll", "
 //       addprop string         (string should be in the format of propertyName $price)
 //       remprop prefix         (remove the first option that starts with prefix within the combo box)
 //       asktobuy               (asks player to buy a property, player will return "YES\n" or "NO\n")
-//       asktosell              (asks player to sell one of their properties. player will return "indexofproprty\n")
+//       asktosell              (asks player to sell one of their properties. player will return "nameofproperty\n")
 //       isfirst                (allows the user to start the game, when they do so the returned message is "START\n")
 //       setplayers playerCount playername0 playername1 playername2..... (tells the client how many players to render and their player names)
-//       remplayer playerId
-//       ownprop playerName propertyId
+//       remplayer playerId     (removes player from the game (unrender))
+//       ownprop playerId propertyId    (set property to be owned by playerId)
 
 wxPoint coords[40] = 
 {
@@ -92,9 +92,9 @@ map<string, int> propertyIndices =
 {
     {"Keelung City", 1}, {"Miaoli Count(r)y", 3}, {"Taitung Train Station", 5}, {"Penghu County", 6},
     {"Kinmen County", 8}, {"Lianjian County", 9}, {"Taitung County", 11}, {"Taiwan Power Company", 12},
-    {"Hualien County", 13}, {"Yilan County", 14}, {"Tainan Train Station", 15}, {"Pingtun County", 16},
+    {"Hualien County", 13}, {"Yilan County", 14}, {"Tainan Train Station", 15}, {"Pingtung County", 16},
     {"Kaohsiung City", 18}, {"Tainan City", 19}, {"Chiayi City", 21}, {"Chiayi County", 23}, {"Yunlin County", 24},
-    {"Taichung Train Station", 25}, {"Nantou County", 26}, {"Chanhua County", 27}, {"Taiwan Water Corporation", 28},
+    {"Taichung Train Station", 25}, {"Nantou County", 26}, {"Changhua County", 27}, {"Taiwan Water Corporation", 28},
     {"Taichung City", 29}, {"Hsinchu County", 31}, {"Hsinchu City", 32}, {"Taoyuan City", 34}, {"Taipei Train Station", 35},
     {"New Taipei City", 37}, {"Taipei City", 39}
 };
@@ -374,22 +374,10 @@ wxThread::ExitCode MyThread::Entry()
                             }
                             case 1: //build
                             {
-                                try
-                                {
-                                    int propertyId = stoi(argument);
-                                    wxCommandEvent evt(wxEVT_THREAD_BUILD_PROPERTY, wxID_ANY);
+                                wxCommandEvent evt(wxEVT_THREAD_BUILD_PROPERTY, wxID_ANY);
+                                evt.SetString(argument);
 
-                                    evt.SetInt(propertyId);
-                                    m_pHandler->GetEventHandler()->AddPendingEvent(evt);   
-                                }
-                                catch (const invalid_argument& e) 
-                                {
-                                    wxMessageOutputDebug().Printf("input: %s", "ERROR: Invalid build command argument: " + argument);
-                                }
-                                catch (const out_of_range& e) 
-                                {
-                                    wxMessageOutputDebug().Printf("input: %s", "ERROR: Invalid build command argument: " + argument);
-                                }
+                                m_pHandler->GetEventHandler()->AddPendingEvent(evt); 
                                 break;
                             }
                             case 2: //log
@@ -569,23 +557,32 @@ void MyFrame::movePlayer(wxCommandEvent& event)
 
 void MyFrame::buildProperty(wxCommandEvent& event)
 {
-    int propertyId = event.GetInt();
+    string argument = event.GetString().ToStdString();
+    istringstream iss(argument);
 
-    if((propertyCoord[propertyId].x == 0 && propertyCoord[propertyId].y == 0) || propertyState[propertyId] == 5) 
-        return;
+    int propertyId, diff;
 
-    propertyState[propertyId]++;
-
-    if(propertyCoord[propertyId].y >= 782 || propertyCoord[propertyId].y < 118)
+    if (iss >> propertyId >> diff) 
     {
-        wxBitmap bmp(propertyImageSrc[propertyState[propertyId]], wxBITMAP_TYPE_PNG);
-        imgProperty[propertyId]->SetBitmap(bmp);
+        if((propertyCoord[propertyId].x == 0 && propertyCoord[propertyId].y == 0)) 
+            return;
+
+        propertyState[propertyId] += diff;
+
+        if(propertyCoord[propertyId].y >= 782 || propertyCoord[propertyId].y < 118)
+        {
+            wxBitmap bmp(propertyImageSrc[propertyState[propertyId]], wxBITMAP_TYPE_PNG);
+            imgProperty[propertyId]->SetBitmap(bmp);
+        }
+        else
+        {
+            wxBitmap bmp(vertPropertyImageSrc[propertyState[propertyId]], wxBITMAP_TYPE_PNG);
+            imgProperty[propertyId]->SetBitmap(bmp);
+        }
     }
-    else
-    {
-        wxBitmap bmp(vertPropertyImageSrc[propertyState[propertyId]], wxBITMAP_TYPE_PNG);
-        imgProperty[propertyId]->SetBitmap(bmp);
-    }
+    else 
+        wxMessageOutputDebug().Printf("input: %s", "ERROR: Invalid build command argument: " + argument);
+
 }
 
 void MyFrame::modifyBalance(wxCommandEvent& event)
