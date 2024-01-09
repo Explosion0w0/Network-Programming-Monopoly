@@ -21,14 +21,12 @@ using namespace std;
 
 #define INIT_BALANCE 1500
 
-int playerCount = 8;
-int asd = 0;
 string boardImageSrc = "../assets/board.jpg",
     playerImageSrc[8] = {"../assets/01.png", "../assets/02.png", "../assets/03.png", "../assets/04.png", "../assets/05.png", "../assets/06.png", "../assets/07.png", "../assets/08.png"},
     propertyImageSrc[8] = {"../assets/house00.png", "../assets/house01.png", "../assets/house02.png", "../assets/house03.png", "../assets/house04.png", "../assets/hotel.png"},
     vertPropertyImageSrc[6] = {"../assets/house00vertical.png", "../assets/house01vertical.png", "../assets/house02vertical.png", "../assets/house03vertical.png", "../assets/house04vertical.png", "../assets/hotelvertical.png"};
 
-vector<string> eventPrefixes = {"move ", "build ", "log ", "balance ", "roll ", "moveto ", "addprop ", "remprop ", "asktobuy", "asktosell"};
+vector<string> eventPrefixes = {"move ", "build ", "log ", "balance ", "roll ", "moveto ", "addprop ", "remprop ", "asktobuy", "asktosell", "isfirst", "setplayers"};
 
 //usage: (split commands with /, for example: move 3 7/log player 3 moved for 7 steps)
 //       move playerId steps    (moves playerId for a number of steps)
@@ -41,7 +39,8 @@ vector<string> eventPrefixes = {"move ", "build ", "log ", "balance ", "roll ", 
 //       remprop string         (string should also contain the price if it was specified in addprop)
 //       asktobuy               (asks player to buy a property, player will return "YES\n" or "NO\n")
 //       asktosell              (asks player to sell one of their properties. player will return "nameofproperty\n")
-
+//       isfirst                (allows the user to start the game, when they do so the returned message is "START\n")
+//       setplayers playerCount (tells the client how many players to render)
 
 wxPoint topLeft[40] = 
 {
@@ -82,7 +81,8 @@ enum
     ID_BUTTONDICE = 2,
     ID_BUTTONBUY = 3,
     ID_BUTTONDONTBUY = 4,
-    ID_BUTTONSELL = 5
+    ID_BUTTONSELL = 5,
+    ID_BUTTONSTART = 6
 };
 
 wxDECLARE_EVENT(wxEVT_THREAD_COMPLETE, wxCommandEvent);
@@ -96,6 +96,8 @@ wxDECLARE_EVENT(wxEVT_THREAD_ADD_PROPERTY, wxCommandEvent);
 wxDECLARE_EVENT(wxEVT_THREAD_REMOVE_PROPERTY, wxCommandEvent);
 wxDECLARE_EVENT(wxEVT_THREAD_ASK_TO_BUY, wxCommandEvent);
 wxDECLARE_EVENT(wxEVT_THREAD_ASK_TO_SELL, wxCommandEvent);
+wxDECLARE_EVENT(wxEVT_THREAD_IS_FIRST, wxCommandEvent);
+wxDECLARE_EVENT(wxEVT_THREAD_SET_PLAYERS, wxCommandEvent);
 
 class MyFrame;
 
@@ -138,6 +140,8 @@ public:
     void removeProperty(wxCommandEvent& event);
     void askToBuy(wxCommandEvent& event);
     void askToSell(wxCommandEvent& event);
+    void isFirst(wxCommandEvent& event);
+    void setPlayers(wxCommandEvent& event);
 
     MyThread *m_pThread;
     wxCriticalSection m_pThreadCS;
@@ -148,6 +152,7 @@ protected:
     wxButton *buttonBuy;
     wxButton *buttonDontBuy;
     wxButton *buttonSell;
+    wxButton *buttonStart;
     wxStaticBitmap *imageCtrl, *imgPlayers[8], *imgProperty[22];
     wxTimer *timer;
     wxTextCtrl *textDisplay;
@@ -158,6 +163,7 @@ protected:
     void OnButtonBuyClick(wxCommandEvent& event);
     void OnButtonDontBuyClick(wxCommandEvent& event);
     void OnButtonSellClick(wxCommandEvent& event);
+    void OnButtonStartClick(wxCommandEvent& event);
 
     int sockfd, playerLocations[8], propertyState[22], balance,
         pendingRoll1, pendingRoll2;
@@ -170,6 +176,7 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_BUTTON(ID_BUTTONBUY, MyFrame::OnButtonBuyClick)
     EVT_BUTTON(ID_BUTTONDONTBUY, MyFrame::OnButtonDontBuyClick)
     EVT_BUTTON(ID_BUTTONSELL, MyFrame::OnButtonSellClick)
+    EVT_BUTTON(ID_BUTTONSTART, MyFrame::OnButtonStartClick)
     EVT_CLOSE(MyFrame::OnClose)
     EVT_COMMAND(wxID_ANY, wxEVT_THREAD_LOG, MyFrame::logAction)
     EVT_COMMAND(wxID_ANY, wxEVT_THREAD_COMPLETE, MyFrame::OnThreadCompletion)
@@ -182,6 +189,8 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_COMMAND(wxID_ANY, wxEVT_THREAD_REMOVE_PROPERTY, MyFrame::removeProperty)
     EVT_COMMAND(wxID_ANY, wxEVT_THREAD_ASK_TO_BUY, MyFrame::askToBuy)
     EVT_COMMAND(wxID_ANY, wxEVT_THREAD_ASK_TO_SELL, MyFrame::askToSell)
+    EVT_COMMAND(wxID_ANY, wxEVT_THREAD_IS_FIRST, MyFrame::isFirst)
+    EVT_COMMAND(wxID_ANY, wxEVT_THREAD_SET_PLAYERS, MyFrame::setPlayers)
 wxEND_EVENT_TABLE()
 
 wxDEFINE_EVENT(wxEVT_THREAD_COMPLETE, wxCommandEvent);
@@ -195,6 +204,8 @@ wxDEFINE_EVENT(wxEVT_THREAD_ADD_PROPERTY, wxCommandEvent);
 wxDEFINE_EVENT(wxEVT_THREAD_REMOVE_PROPERTY, wxCommandEvent);
 wxDEFINE_EVENT(wxEVT_THREAD_ASK_TO_BUY, wxCommandEvent);
 wxDEFINE_EVENT(wxEVT_THREAD_ASK_TO_SELL, wxCommandEvent);
+wxDEFINE_EVENT(wxEVT_THREAD_IS_FIRST, wxCommandEvent);
+wxDEFINE_EVENT(wxEVT_THREAD_SET_PLAYERS, wxCommandEvent);
 
 bool MyApp::OnInit()
 {
@@ -454,6 +465,34 @@ wxThread::ExitCode MyThread::Entry()
 
                                 break;
                             }
+                            case 10: //is first user
+                            {
+                                wxCommandEvent evt(wxEVT_THREAD_IS_FIRST, wxID_ANY);
+                                m_pHandler->GetEventHandler()->AddPendingEvent(evt);
+
+                                break;
+                            }
+                            case 11: //set player count
+                            {
+                                try
+                                {
+                                    int players = stoi(argument);
+                                    wxCommandEvent evt(wxEVT_THREAD_SET_PLAYERS, wxID_ANY);
+
+                                    evt.SetInt(players);
+                                    m_pHandler->GetEventHandler()->AddPendingEvent(evt);   
+                                }
+                                catch (const invalid_argument& e) 
+                                {
+                                    wxMessageOutputDebug().Printf("input: %s", "ERROR: Invalid setplayers command argument: " + argument);
+                                }
+                                catch (const out_of_range& e) 
+                                {
+                                    wxMessageOutputDebug().Printf("input: %s", "ERROR: Invalid setplayers command argument: " + argument);
+                                }
+
+                                break;
+                            }
                         }
 
                         break;
@@ -584,6 +623,18 @@ void MyFrame::askToSell(wxCommandEvent& event)
     buttonSell->Show(true);
 }
 
+void MyFrame::isFirst(wxCommandEvent& event)
+{
+    buttonStart->Show(true);
+}
+
+void MyFrame::setPlayers(wxCommandEvent& event)
+{
+    int playerCount = event.GetInt();
+    for(int i = 0 ; i < playerCount; ++i)
+        imgPlayers[i]->Show(true);
+}
+
 MyThread::~MyThread()
 {
     wxCriticalSectionLocker enter(m_pHandler->m_pThreadCS);
@@ -627,6 +678,7 @@ MyFrame::MyFrame(const wxString& title, const wxPoint& pos, const wxSize& size, 
     {
         wxBitmap bmp(playerImageSrc[i], wxBITMAP_TYPE_PNG);
         imgPlayers[i] = new wxStaticBitmap(panel, wxID_ANY, bmp, topLeft[0] + squareOffset + playerOffset[i]);
+        imgPlayers[i]->Show(false);
     }
 
     for(int i = 0 ; i < 22; ++i)
@@ -648,11 +700,13 @@ MyFrame::MyFrame(const wxString& title, const wxPoint& pos, const wxSize& size, 
     buttonBuy = new wxButton(panel, ID_BUTTONBUY, "Buy", wxPoint(950, 800), wxSize(150, 50));
     buttonDontBuy = new wxButton(panel, ID_BUTTONDONTBUY, "Don't Buy", wxPoint(1150, 800), wxSize(150, 50));
     buttonSell = new wxButton(panel, ID_BUTTONSELL, "Sell", wxPoint(950, 800), wxSize(150, 50));
+    buttonStart = new wxButton(panel, ID_BUTTONSTART, "START GAME", wxPoint(350, 350), wxSize(200, 200));
 
     buttonDice->Show(false);
     buttonBuy->Show(false);
     buttonDontBuy->Show(false);
     buttonSell->Show(false);
+    buttonStart->Show(false);
     
 }
 
@@ -729,8 +783,15 @@ void MyFrame::OnButtonSellClick(wxCommandEvent& event)
     }
 }
 
+void MyFrame::OnButtonStartClick(wxCommandEvent& event) 
+{
+    buttonStart->Show(false);
+    Writen(sockfd, const_cast<char*>("START\n"), 7);
+}
+
 
 wxIMPLEMENT_APP(MyApp);
+
 
 
 
