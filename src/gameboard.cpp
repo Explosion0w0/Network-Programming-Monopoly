@@ -86,7 +86,7 @@ Card randCard(int cardType) {
                 descr = "Your car fell into a sinkhole and needs fixing. Pay $100.";
                 break;
             case 6:
-                descr = "Your boss got caught selling drugs, so you became the a scapegoat. Move to prison.";
+                descr = "Your boss got caught selling drugs, so you became the scapegoat. Move to prison.";
                 break;
             case 7:
                 descr = "You caught the viral male star having a secret date with his girlfriend and demanded $50 hush money.";
