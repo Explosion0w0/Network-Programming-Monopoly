@@ -26,23 +26,25 @@ string boardImageSrc = "../assets/board.jpg",
     propertyImageSrc[8] = {"../assets/house00.png", "../assets/house01.png", "../assets/house02.png", "../assets/house03.png", "../assets/house04.png", "../assets/hotel.png"},
     vertPropertyImageSrc[6] = {"../assets/house00vertical.png", "../assets/house01vertical.png", "../assets/house02vertical.png", "../assets/house03vertical.png", "../assets/house04vertical.png", "../assets/hotelvertical.png"};
 
-vector<string> eventPrefixes = {"move ", "build ", "log ", "balance ", "roll ", "moveto ", "addprop ", "remprop ", "asktobuy", "asktosell", "isfirst", "setplayers"};
+vector<string> eventPrefixes = {"move ", "build ", "log ", "balance ", "roll", "moveto ", "addprop ", "remprop ", "asktobuy", "asktosell", "isfirst", "setplayers ", "remplayer ", "ownprop "};
 
 //usage: (split commands with /, for example: move 3 7/log player 3 moved for 7 steps)
 //       move playerId steps    (moves playerId for a number of steps)
 //       build propertyId       (upgrades property at propertyId by 1 level)
 //       log message            (displays message in the text box)
 //       balance number         (if number is negative, number will be deducted from balance)
-//       roll dice1 dice2       (client will return OK to server once button is clicked)
+//       roll                   (client will return OK to server once button is clicked)
 //       moveto playerId index  (moves player directly to index)
-//       addprop string         (string would probably be in the format of "name $price")
-//       remprop string         (string should also contain the price if it was specified in addprop)
+//       addprop string         (string should be in the format of propertyName $price)
+//       remprop prefix         (remove the first option that starts with prefix within the combo box)
 //       asktobuy               (asks player to buy a property, player will return "YES\n" or "NO\n")
-//       asktosell              (asks player to sell one of their properties. player will return "nameofproperty\n")
+//       asktosell              (asks player to sell one of their properties. player will return "indexofproprty\n")
 //       isfirst                (allows the user to start the game, when they do so the returned message is "START\n")
-//       setplayers playerCount (tells the client how many players to render)
+//       setplayers playerCount playername0 playername1 playername2..... (tells the client how many players to render and their player names)
+//       remplayer playerId
+//       ownprop playerName propertyId
 
-wxPoint topLeft[40] = 
+wxPoint coords[40] = 
 {
     wxPoint(782, 782), wxPoint(708, 782), wxPoint(634, 782), wxPoint(561, 782),
     wxPoint(487, 782), wxPoint(413, 782), wxPoint(339, 782), wxPoint(265, 782),
@@ -64,16 +66,39 @@ playerOffset[8] =
 {
     wxPoint(0, -17), wxPoint(17, -17), wxPoint(34, -17), wxPoint(51, -17),
     wxPoint(0, 0), wxPoint(17, 0), wxPoint(34, 0), wxPoint(51, 0)
-},
-propertyCoord[22] =
+}, propertyOffset = wxPoint(3, 3),
+ownLabelOffset[4] = 
 {
-    wxPoint(708, 782), wxPoint(561, 782), wxPoint(339, 782), wxPoint(192, 782),
-    wxPoint(118, 782), wxPoint(91, 708), wxPoint(91, 561), wxPoint(91, 487),
-    wxPoint(91, 339), wxPoint(91, 192), wxPoint(91, 118), wxPoint(118, 91),
-    wxPoint(265, 91), wxPoint(339, 91), wxPoint(487, 91), wxPoint(561, 91),
-    wxPoint(708, 91), wxPoint(782, 118), wxPoint(782, 192), wxPoint(782, 339),
-    wxPoint(782, 561), wxPoint(782, 708)
-}, propertyOffset = wxPoint(3, 3);
+    wxPoint(6, -8), wxPoint(117, 6), wxPoint(6, 117), wxPoint(-8, 6)
+};
+
+wxColour playerColors[8] = 
+{
+    wxColour(236, 28, 36), wxColour(255, 127, 39), wxColour(255, 242, 0), wxColour(101, 246, 38),
+    wxColour(0, 168, 243), wxColour(184, 61, 186), wxColour(255, 255, 255), wxColour(88, 88, 88)
+};
+
+map<int, wxPoint> propertyCoord =
+{
+    {1, wxPoint(708, 782)}, {3, wxPoint(561, 782)}, {6, wxPoint(339, 782)}, {8, wxPoint(192, 782)},
+    {9, wxPoint(118, 782)}, {11, wxPoint(91, 708)}, {13, wxPoint(91, 561)}, {14, wxPoint(91, 487)},
+    {16, wxPoint(91, 339)}, {18, wxPoint(91, 192)}, {19, wxPoint(91, 118)}, {21, wxPoint(118, 91)},
+    {23, wxPoint(265, 91)}, {24, wxPoint(339, 91)}, {26, wxPoint(487, 91)}, {27, wxPoint(561, 91)},
+    {29, wxPoint(708, 91)}, {31, wxPoint(782, 118)}, {32, wxPoint(782, 192)}, {34, wxPoint(782, 339)},
+    {37, wxPoint(782, 561)}, {39, wxPoint(782, 708)}
+};
+
+map<string, int> propertyIndices =
+{
+    {"Keelung City", 1}, {"Miaoli Count(r)y", 3}, {"Taitung Train Station", 5}, {"Penghu County", 6},
+    {"Kinmen County", 8}, {"Lianjian County", 9}, {"Taitung County", 11}, {"Taiwan Power Company", 12},
+    {"Hualien County", 13}, {"Yilan County", 14}, {"Tainan Train Station", 15}, {"Pingtun County", 16},
+    {"Kaohsiung City", 18}, {"Tainan City", 19}, {"Chiayi City", 21}, {"Chiayi County", 23}, {"Yunlin County", 24},
+    {"Taichung Train Station", 25}, {"Nantou County", 26}, {"Chanhua County", 27}, {"Taiwan Water Corporation", 28},
+    {"Taichung City", 29}, {"Hsinchu County", 31}, {"Hsinchu City", 32}, {"Taoyuan City", 34}, {"Taipei Train Station", 35},
+    {"New Taipei City", 37}, {"Taipei City", 39}
+};
+
 
 enum
 {
@@ -98,6 +123,8 @@ wxDECLARE_EVENT(wxEVT_THREAD_ASK_TO_BUY, wxCommandEvent);
 wxDECLARE_EVENT(wxEVT_THREAD_ASK_TO_SELL, wxCommandEvent);
 wxDECLARE_EVENT(wxEVT_THREAD_IS_FIRST, wxCommandEvent);
 wxDECLARE_EVENT(wxEVT_THREAD_SET_PLAYERS, wxCommandEvent);
+wxDECLARE_EVENT(wxEVT_THREAD_REMOVE_PLAYER, wxCommandEvent);
+wxDECLARE_EVENT(wxEVT_THREAD_OWN_PROPERTY, wxCommandEvent);
 
 class MyFrame;
 
@@ -142,6 +169,8 @@ public:
     void askToSell(wxCommandEvent& event);
     void isFirst(wxCommandEvent& event);
     void setPlayers(wxCommandEvent& event);
+    void removePlayer(wxCommandEvent& event);
+    void ownProperty(wxCommandEvent& event);
 
     MyThread *m_pThread;
     wxCriticalSection m_pThreadCS;
@@ -153,11 +182,12 @@ protected:
     wxButton *buttonDontBuy;
     wxButton *buttonSell;
     wxButton *buttonStart;
-    wxStaticBitmap *imageCtrl, *imgPlayers[8], *imgProperty[22];
+    wxStaticBitmap *imageCtrl, *imgPlayers[8], *imgProperty[40];
     wxTimer *timer;
-    wxTextCtrl *textDisplay;
-    wxTextCtrl *balanceDisplay;
+    wxTextCtrl *textDisplay, *balanceDisplay;
+    wxControl *ownLabel[40];
     wxComboBox *ownedProperties;
+    wxStaticText *playerNames[8];
 
     void OnButtonDiceClick(wxCommandEvent& event);
     void OnButtonBuyClick(wxCommandEvent& event);
@@ -165,7 +195,7 @@ protected:
     void OnButtonSellClick(wxCommandEvent& event);
     void OnButtonStartClick(wxCommandEvent& event);
 
-    int sockfd, playerLocations[8], propertyState[22], balance,
+    int sockfd, playerLocations[8], propertyState[40], balance,
         pendingRoll1, pendingRoll2;
 
     wxDECLARE_EVENT_TABLE();
@@ -191,6 +221,8 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_COMMAND(wxID_ANY, wxEVT_THREAD_ASK_TO_SELL, MyFrame::askToSell)
     EVT_COMMAND(wxID_ANY, wxEVT_THREAD_IS_FIRST, MyFrame::isFirst)
     EVT_COMMAND(wxID_ANY, wxEVT_THREAD_SET_PLAYERS, MyFrame::setPlayers)
+    EVT_COMMAND(wxID_ANY, wxEVT_THREAD_REMOVE_PLAYER, MyFrame::removePlayer)
+    EVT_COMMAND(wxID_ANY, wxEVT_THREAD_OWN_PROPERTY, MyFrame::ownProperty)
 wxEND_EVENT_TABLE()
 
 wxDEFINE_EVENT(wxEVT_THREAD_COMPLETE, wxCommandEvent);
@@ -206,6 +238,8 @@ wxDEFINE_EVENT(wxEVT_THREAD_ASK_TO_BUY, wxCommandEvent);
 wxDEFINE_EVENT(wxEVT_THREAD_ASK_TO_SELL, wxCommandEvent);
 wxDEFINE_EVENT(wxEVT_THREAD_IS_FIRST, wxCommandEvent);
 wxDEFINE_EVENT(wxEVT_THREAD_SET_PLAYERS, wxCommandEvent);
+wxDEFINE_EVENT(wxEVT_THREAD_REMOVE_PLAYER, wxCommandEvent);
+wxDEFINE_EVENT(wxEVT_THREAD_OWN_PROPERTY, wxCommandEvent);
 
 bool MyApp::OnInit()
 {
@@ -398,39 +432,19 @@ wxThread::ExitCode MyThread::Entry()
                             }
                             case 4: //roll
                             {
-                                istringstream iss(argument);
+                                wxCommandEvent evt(wxEVT_THREAD_ROLL, wxID_ANY);
+                                // evt.SetString(argument);
 
-                                int roll1, roll2;
-
-                                if (iss >> roll1 >> roll2) 
-                                {
-                                    wxCommandEvent evt(wxEVT_THREAD_ROLL, wxID_ANY);
-                                    evt.SetString(argument);
-
-                                    m_pHandler->GetEventHandler()->AddPendingEvent(evt);    
-                                } 
-                                else 
-                                    wxMessageOutputDebug().Printf("input: %s", "ERROR: Invalid roll command argument: " + argument);
+                                m_pHandler->GetEventHandler()->AddPendingEvent(evt); 
 
                                 break;
                             }
                             case 5: //moveto
                             {
-                                istringstream iss(argument);
+                                wxCommandEvent evt(wxEVT_THREAD_MOVE_TO, wxID_ANY);
+                                evt.SetString(argument);
 
-                                int playerId, index;
-
-                                if (iss >> playerId >> index) 
-                                {
-                                    wxCommandEvent evt(wxEVT_THREAD_MOVE_TO, wxID_ANY);
-                                    evt.SetString(argument);
-
-                                    m_pHandler->GetEventHandler()->AddPendingEvent(evt);    
-                                } 
-                                else 
-                                    wxMessageOutputDebug().Printf("input: %s", "ERROR: Invalid moveto command argument: " + argument);
-
-
+                                m_pHandler->GetEventHandler()->AddPendingEvent(evt);    
                                 break;
                             }
                             case 6: //add property
@@ -474,24 +488,42 @@ wxThread::ExitCode MyThread::Entry()
                             }
                             case 11: //set player count
                             {
+                                wxCommandEvent evt(wxEVT_THREAD_SET_PLAYERS, wxID_ANY);
+                                evt.SetString(argument);
+                                
+                                m_pHandler->GetEventHandler()->AddPendingEvent(evt);
+
+                                break;
+                            }
+                            case 12: //remove player
+                            {
                                 try
                                 {
-                                    int players = stoi(argument);
-                                    wxCommandEvent evt(wxEVT_THREAD_SET_PLAYERS, wxID_ANY);
+                                    int playerId = stoi(argument);
+                                    wxCommandEvent evt(wxEVT_THREAD_REMOVE_PLAYER, wxID_ANY);
 
-                                    evt.SetInt(players);
+                                    evt.SetInt(playerId);
                                     m_pHandler->GetEventHandler()->AddPendingEvent(evt);   
                                 }
                                 catch (const invalid_argument& e) 
                                 {
-                                    wxMessageOutputDebug().Printf("input: %s", "ERROR: Invalid setplayers command argument: " + argument);
+                                    wxMessageOutputDebug().Printf("input: %s", "ERROR: Invalid remplayer command argument: " + argument);
                                 }
                                 catch (const out_of_range& e) 
                                 {
-                                    wxMessageOutputDebug().Printf("input: %s", "ERROR: Invalid setplayers command argument: " + argument);
+                                    wxMessageOutputDebug().Printf("input: %s", "ERROR: Invalid remplayer command argument: " + argument);
                                 }
 
                                 break;
+                            }
+                            case 13: //own property
+                            {
+                                wxCommandEvent evt(wxEVT_THREAD_OWN_PROPERTY, wxID_ANY);
+                                evt.SetString(argument);
+                                
+                                m_pHandler->GetEventHandler()->AddPendingEvent(evt);
+
+                                break;                               
                             }
                         }
 
@@ -528,9 +560,9 @@ void MyFrame::movePlayer(wxCommandEvent& event)
     int newLocation = playerLocations[playerId];
 
     if(newLocation % 10 == 0) //square
-        imgPlayers[playerId]->Move(topLeft[newLocation] + squareOffset + playerOffset[playerId]);
+        imgPlayers[playerId]->Move(coords[newLocation] + squareOffset + playerOffset[playerId]);
     else
-        imgPlayers[playerId]->Move(topLeft[newLocation] + blockOffset[newLocation / 10] + playerOffset[playerId]);
+        imgPlayers[playerId]->Move(coords[newLocation] + blockOffset[newLocation / 10] + playerOffset[playerId]);
 
     imgPlayers[playerId]->Refresh();
 }
@@ -539,7 +571,7 @@ void MyFrame::buildProperty(wxCommandEvent& event)
 {
     int propertyId = event.GetInt();
 
-    if(propertyState[propertyId] == 5) 
+    if((propertyCoord[propertyId].x == 0 && propertyCoord[propertyId].y == 0) || propertyState[propertyId] == 5) 
         return;
 
     propertyState[propertyId]++;
@@ -565,11 +597,13 @@ void MyFrame::modifyBalance(wxCommandEvent& event)
 
 void MyFrame::roll(wxCommandEvent& event)
 {
-    string argument = event.GetString().ToStdString();
-    istringstream iss(argument);
+    // string argument = event.GetString().ToStdString();
+    // istringstream iss(argument);
 
-    iss >> pendingRoll1 >> pendingRoll2;
-
+    // if (iss >> pendingRoll1 >> pendingRoll2) 
+    //     buttonDice->Show(true); 
+    // else 
+    //     wxMessageOutputDebug().Printf("input: %s", "ERROR: Invalid roll command argument: " + argument);
     buttonDice->Show(true);
 }
 
@@ -580,18 +614,21 @@ void MyFrame::moveTo(wxCommandEvent& event)
 
     int playerId, index;
 
-    iss >> playerId >> index;
+    if (iss >> playerId >> index) 
+    {
+        playerLocations[playerId] = index;
 
-    playerLocations[playerId] = index;
-    
-    int newLocation = playerLocations[playerId];
+        int newLocation = playerLocations[playerId];
 
-    if(newLocation % 10 == 0) //square
-        imgPlayers[playerId]->Move(topLeft[newLocation] + squareOffset + playerOffset[playerId]);
-    else
-        imgPlayers[playerId]->Move(topLeft[newLocation] + blockOffset[newLocation / 10] + playerOffset[playerId]);
+        if(newLocation % 10 == 0) //square
+            imgPlayers[playerId]->Move(coords[newLocation] + squareOffset + playerOffset[playerId]);
+        else
+            imgPlayers[playerId]->Move(coords[newLocation] + blockOffset[newLocation / 10] + playerOffset[playerId]);
 
-    imgPlayers[playerId]->Refresh();
+        imgPlayers[playerId]->Refresh();  
+    } 
+    else 
+        wxMessageOutputDebug().Printf("input: %s", "ERROR: Invalid moveto command argument: " + argument);
 }
 
 void MyFrame::addProperty(wxCommandEvent& event)
@@ -603,13 +640,18 @@ void MyFrame::addProperty(wxCommandEvent& event)
 void MyFrame::removeProperty(wxCommandEvent& event)
 {
     wxString property = event.GetString();
-    
-    int index = ownedProperties->FindString(property);
+    if(property.EndsWith('\n'))
+        property.RemoveLast();
 
-    if (index != wxNOT_FOUND) 
-        ownedProperties->Delete(index);
-    else
-        wxLogMessage("ERROR: Entry not found in properties combo box: %s", property);
+    for (unsigned int i = 0; i < ownedProperties->GetCount(); ++i) 
+    {
+        wxString itemText = ownedProperties->GetString(i);
+        if (itemText.StartsWith(property)) 
+        {
+            ownedProperties->Delete(i);
+            break;
+        }
+    }
 }
 
 void MyFrame::askToBuy(wxCommandEvent& event)
@@ -630,9 +672,38 @@ void MyFrame::isFirst(wxCommandEvent& event)
 
 void MyFrame::setPlayers(wxCommandEvent& event)
 {
-    int playerCount = event.GetInt();
+    string argument = event.GetString().ToStdString();
+    istringstream iss(argument);
+
+    int playerCount;
+
+    iss >> playerCount;
+
     for(int i = 0 ; i < playerCount; ++i)
+    {
+        string tmpname;
+        iss >> tmpname;
+        playerNames[i]->SetLabel(tmpname);
         imgPlayers[i]->Show(true);
+    }
+}
+
+void MyFrame::removePlayer(wxCommandEvent& event)
+{
+    int playerId = event.GetInt();
+    imgPlayers[playerId]->Show(false);
+}
+
+void MyFrame::ownProperty(wxCommandEvent& event)
+{
+    string argument = event.GetString().ToStdString();
+    int playerId, propertyId;
+
+    istringstream iss(argument);
+
+    if(iss >> playerId >> propertyId)
+        ownLabel[propertyId]->SetBackgroundColour(playerColors[playerId]);
+
 }
 
 MyThread::~MyThread()
@@ -674,16 +745,17 @@ MyFrame::MyFrame(const wxString& title, const wxPoint& pos, const wxSize& size, 
 
     ownedProperties = new wxComboBox(panel, wxID_ANY, wxEmptyString, wxPoint(950, 700), wxSize(150, 50), wxArrayString(), wxCB_DROPDOWN);
 
-    for(int i = 0 ; i < playerCount; ++i)
+    for(int i = 0 ; i < 8; ++i)
     {
         wxBitmap bmp(playerImageSrc[i], wxBITMAP_TYPE_PNG);
-        imgPlayers[i] = new wxStaticBitmap(panel, wxID_ANY, bmp, topLeft[0] + squareOffset + playerOffset[i]);
+        imgPlayers[i] = new wxStaticBitmap(panel, wxID_ANY, bmp, coords[0] + squareOffset + playerOffset[i]);
         imgPlayers[i]->Show(false);
     }
 
-    for(int i = 0 ; i < 22; ++i)
+    for(int i = 0 ; i < 40; ++i)
     {
         wxPoint tmpCoord = propertyCoord[i];
+
         if(tmpCoord.y > 782 || tmpCoord.y < 118)
         {
             wxBitmap bmp(propertyImageSrc[0], wxBITMAP_TYPE_PNG);
@@ -694,7 +766,19 @@ MyFrame::MyFrame(const wxString& title, const wxPoint& pos, const wxSize& size, 
             wxBitmap bmp(vertPropertyImageSrc[0], wxBITMAP_TYPE_PNG);
             imgProperty[i] = new wxStaticBitmap(panel, wxID_ANY, bmp, propertyCoord[i] + propertyOffset);
         }
+        if(i % 10 != 0)
+            ownLabel[i] = new wxControl(panel, wxID_ANY, coords[i] + ownLabelOffset[i / 10], ((i / 10) % 2 == 0 ? wxSize(62, 8) : wxSize(8, 62)));
     }
+
+
+    playerNames[0] = new wxStaticText(panel, wxID_ANY, "", wxPoint(215, 185), wxSize(100, 20));
+    playerNames[1] = new wxStaticText(panel, wxID_ANY, "", wxPoint(215, 210), wxSize(100, 20));
+    playerNames[2] = new wxStaticText(panel, wxID_ANY, "", wxPoint(215, 235), wxSize(100, 20));
+    playerNames[3] = new wxStaticText(panel, wxID_ANY, "", wxPoint(215, 260), wxSize(100, 20));
+    playerNames[4] = new wxStaticText(panel, wxID_ANY, "", wxPoint(215, 285), wxSize(100, 20));
+    playerNames[5] = new wxStaticText(panel, wxID_ANY, "", wxPoint(215, 310), wxSize(100, 20));
+    playerNames[6] = new wxStaticText(panel, wxID_ANY, "", wxPoint(215, 335), wxSize(100, 20));
+    playerNames[7] = new wxStaticText(panel, wxID_ANY, "", wxPoint(215, 360), wxSize(100, 20));
     
     buttonDice = new wxButton(panel, ID_BUTTONDICE, "Roll Dice", wxPoint(950, 800), wxSize(150, 50));
     buttonBuy = new wxButton(panel, ID_BUTTONBUY, "Buy", wxPoint(950, 800), wxSize(150, 50));
@@ -737,18 +821,6 @@ void MyFrame::OnButtonDiceClick(wxCommandEvent& event)
     buttonDice->Show(false);
 
     Writen(sockfd, const_cast<char*>("OK\n"), 4);
-
-    auto currentTime = chrono::system_clock::to_time_t(chrono::system_clock::now());
-
-    tm* localTime = std::localtime(&currentTime);
-
-    ostringstream oss;
-    oss << put_time(localTime, "%H:%M");
-    string currentTimeStr = oss.str();
-
-    textDisplay->AppendText("[" + currentTimeStr + "] " + "You rolled " + to_string(pendingRoll1) + " and " + to_string(pendingRoll2) + '\n');
-    textDisplay->ShowPosition(textDisplay->GetLastPosition());
-
 }
 
 void MyFrame::OnButtonBuyClick(wxCommandEvent& event) 
@@ -771,13 +843,17 @@ void MyFrame::OnButtonSellClick(wxCommandEvent& event)
     if(!selectedProperty.IsEmpty())
     {
         buttonSell->Show(false);
+
         ownedProperties->Delete(ownedProperties->FindString(selectedProperty));
 
-        if(selectedProperty.Last() != '\n')
-            selectedProperty += '\n';
+        string strSelectedProperty = selectedProperty.ToStdString();
+        string name = strSelectedProperty.substr(0, strSelectedProperty.find(" $"));
 
-        wxCharBuffer buffer = selectedProperty.ToUTF8();
-        Writen(sockfd, buffer.data(), strlen(buffer.data()));
+        int index = propertyIndices[name];
+        char tmp[5];
+        snprintf(tmp, 5, "%d\n", index);
+
+        Writen(sockfd, tmp, strlen(tmp));
 
         ownedProperties->SetValue("");
     }
