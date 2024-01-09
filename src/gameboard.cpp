@@ -1433,6 +1433,11 @@ void game(WaitingRoom *room) {
         //board.setBankrupt(command);
         cout << "\n\n\n\n- - - - - - - - - - - - - Turn " << turnNum++ << " - - - - - - - - - - - - -\n\n";
         board.nextTurn();
+
+        char recvline[MAXLINE];
+        Readline(board.getTurnPlayer()->getSockfd(), recvline, MAXLINE);
+        command = atoi(recvline);
+        
         if (board.getUserInput(command) <= 0) goto TurnEnd;
         if (board.getTurnPlayer()->isInJail()) {
             board.getField(10)->execute(board.getTurnPlayer());
@@ -1480,8 +1485,78 @@ int main () {
         seed = (unsigned int)time(NULL);
         srand(seed);
     */
+    
+   /*
     srand(42); // for test
     WaitingRoom room = {3, {"Explosion0w0", "kwkwkwkak", "LIAN26880912"}, {3000, 3001, 3002}}; // for test
     game(&room);
     
+    */
+    
+
+    WaitingRoom room = {0, {}, {}};
+
+	int					listenfd, connfd, maxfdp;
+	pid_t				childpid;
+	void				sig_chld(int);
+	fd_set				rset;
+	ssize_t				n;
+	const int			on = 1;
+	struct sockaddr_in	servaddr, cliaddr;	
+	char				sendline[MAXLINE], recvline[MAXLINE];
+	socklen_t 			addrlen = 32;
+	
+	listenfd = Socket(AF_INET, SOCK_STREAM, 0);
+
+	bzero(&servaddr, sizeof(servaddr));
+	servaddr.sin_family      = AF_INET;
+	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	servaddr.sin_port        = htons(SERV_PORT+3);
+
+	Setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+	Bind(listenfd, (SA *) &servaddr, sizeof(servaddr));
+
+
+	
+	Listen(listenfd, LISTENQ);
+
+	for ( ; ; ) {
+		
+		bzero(&recvline, sizeof(recvline));
+        connfd = Accept(listenfd, (SA *)&cliaddr, &addrlen);
+        room.sockfds[room.playerNum] = connfd;
+        //room.playerNames[room.playerNum] = ;
+        room.playerNum++;
+        bzero(&cliaddr, sizeof(cliaddr));
+
+        sprintf(sendline, "Hi, you are the #%d user. Wait for others.\n", room.playerNum);
+        Writen(connfd, sendline, strlen(sendline));
+
+        // onset
+        bzero(&sendline, sizeof(sendline));
+        sprintf(sendline, "Game start!\n");
+        for (int i = 0; i < room.playerNum; i++){
+            Writen(room.sockfds[i], sendline, strlen(sendline));
+        }
+        
+        Fputs("Game start\n", stdout);
+
+        if ((childpid = Fork()) == 0) {    
+            Close(listenfd);    
+            
+            game(&room);
+
+            for (int i = 0; i < room.playerNum; i++){
+                Close(room.sockfds[i]);
+            }
+            exit(0);
+        }
+
+        wait(NULL);
+        for (int i = 0; i < room.playerNum; i++){
+            Close(room.sockfds[i]);
+        }
+        bzero(&room, sizeof(room));
+        
+    }
 }
