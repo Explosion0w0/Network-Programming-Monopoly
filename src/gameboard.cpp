@@ -71,68 +71,68 @@ Card randCard(int cardType) {
         effect += 1;
         switch (effect) {
             case 1:
-                descr = "剛買的豆花掉到地上，損失30$";
+                descr = "You dropped the tofu pudding you just bought. Lose $30";
                 break;
             case 2:
-                descr = "走在路上被流彈擊中，醫藥費150$";
+                descr = "You are stuck by a stray bullet when strolling. Pay $150 in medical expenses.";
                 break;
             case 3:
-                descr = "推倒資本主義的高牆，所有人現金平分";
+                descr = "Topple the towering walls of capitalism, let the wealth be equally shared among all comrades.";
                 break;
             case 4:
-                descr = "颱風肆虐，將鐵皮屋整棟吹飛，隨機損失1棟房屋";
+                descr = "The typhoon blew your entire iron sheet house away. Lose a random building.";
                 break;
             case 5:
-                descr = "車子掉進天坑，維修費100$";
+                descr = "Your car fell into a sinkhole and needs fixing. Pay $100.";
                 break;
             case 6:
-                descr = "大哥販毒被抓，成為替罪羔羊，入獄";
+                descr = "Your boss got caught selling drugs, so you became the a scapegoat. Move to prison.";
                 break;
             case 7:
-                descr = "抓到當紅男星與女友密會，索取封口費50$";
+                descr = "You caught the viral male star having a secret date with his girlfriend and demanded $50 hush money.";
                 break;
             case 8:
-                descr = "參選期間被抓到老家違建，隨機損失1棟房屋";
+                descr = "During election, your old house was exposed to be illegally built. Lose a random building";
                 break;
             case 9:
-                descr = "在農地上種光電，每持有一塊地獲得15$";
+                descr = "You cultivate some optoelectronics in your farmlands. Earn $15 for every property you own.";
                 break;
             case 10:
-                descr = "國際情勢緊張，被迫購買軍火，由全民買單，所有人繳最多50$(除了回合玩家以外，最多繳到沒有現金)";
+                descr = "The international situation is quite tense, so your country decided to buy some arms. All players pay $50.";
                 break;
             case 11:
-                descr = "發生規模9.0強震，地圖上隨機一塊地上房屋全毀 (所有土地都有可能)";
+                descr = "A wild mag 9 earthquake appeared! All buildings on a randomly chosen tile are destroyed.";
                 break;
             case 12:
-                descr = "投胎投得好，父親身為建商，與執政黨合作多年，出事了有老爸罩 (免刑1次，可保留)";
+                descr = "Your father is in the construction business and has been cooperating with the ruling party for many years. If something goes wrong, your dad's got your back. (Avoid prison once)";
                 keep = 1;
                 break;
             case 13:
-                descr = "慘遭投資詐騙，血本無歸，損失200$";
+                descr = "You got scammed for $200";
                 break;
             case 14:
-                descr = "揭露遊戲公司廣告不實，被告侵害名譽，律師費50$";
+                descr = "You tried to expose a game company's false advertisement but was accused of defamation. Hire a lawyer for $50.";
                 break;
             case 15:
-                descr = "下雨忘記帶傘，去便利商店買一把20$";
+                descr = "It's raining and you forgot to bring an umbrella, so you paid $20 to get one from the nearest convenience store.";
                 break;
             case 16:
-                descr = "施工不慎造成停電，對所有人支付賠償金20$";
+                descr = "You caused a power outage during construction. Pay all players $20 as compensation.";
                 break;
             case 17:
-                descr = "台電連年虧損，電價上漲，移動到台灣電力公司並支付電費";
+                descr = "Taipower experiences consecutive losses, electric prices increase. Move to the Taiwan Power Company tile and pay up";
                 break;
             case 18:
-                descr = "代表國家參加奧運，為國爭光，獲得獎金200$";
+                descr = "You represented your country for the Olympics and earned a medal. Receive $200.";
                 break;
             case 19:
-                descr = "過年打麻將連敗，付給隨機一位玩家50$";
+                descr = "You suck at mahjong and went on a losing streak during Chinese New Year. Pay a random player $50.";
                 break;
             case 20:
-                descr = "當黃牛被檢舉，罰款100$";
+                descr = "You are reported as a scalper and fined $100.";
                 break;
             default:
-                descr = "在演藝圈闖出名號，開始被狗仔跟蹤 (你不該看到這張卡，如果看到了，請回報bug)";
+                descr = "How tf did you get this? (Report a bug if you see this)";
                 break;
         }
         
@@ -142,69 +142,69 @@ Card randCard(int cardType) {
         effect += 1;
         switch (effect) {
             case 1:
-                descr = "在新竹棒球場發現大秘寶，獲得100$";
+                descr = "You dug up some grand treasure in Hsinchu baseball field. Receive $100.";
                 break;
             case 2:
-                descr = "發現違規停車，獲得檢舉獎金50$";
+                descr = "You reported illegal parking and got $50.";
                 break;
             case 3:
-                descr = "街頭演出獲得打賞50$";
+                descr = "You were tipped $50 during your street performance.";
                 break;
             case 4:
-                descr = "車子被拖吊，往前走3步";
+                descr = "Your car was towed. Advance 3 steps.";
                 break;
             case 5:
-                descr = "銀行發放利息，每持有100$獲得5$";
+                descr = "The bank disburses interest. Receive $5 for every $100 you own.";
                 break;
             case 6:
-                descr = "路上被強迫推銷愛心筆，損失50$";
+                descr = "You were forced sold some charity pens. Lose $50.";
                 break;
             case 7:
-                descr = "轉賣高人氣的寶口夢卡牌，收入200$";
+                descr = "You flipped some sought-after pokemon cards and earned $200.";
                 break;
             case 8:
-                descr = "被黑道誤認為是仇家，車子被砸，維修費100$";
+                descr = "Mistaken as enemies by a gang, your car gets vandalized. Pay $100 in repair fees.";
                 break;
             case 9:
-                descr = "乘坐普悠瑪號旅行，移動到最近的車站";
+                descr = "You travel on the Puyuma express. Move to the closest train station.";
                 break;
             case 10:
-                descr = "跨年到101看煙火，移動到台北";
+                descr = "You went to Taipei 101 to see fireworks during New Year's Eve. Move to the Taipei City tile.";
                 break;
             case 11:
-                descr = "當詐騙集團車手被抓，入獄";
+                descr = "You are sent to jail for being the wheelman for a scam syndicate.";
                 break;
             case 12:
-                descr = "結識地方派系大佬，出事了有大哥罩 (免刑1次，可保留)";
+                descr = "You made connections with a local faction leader. Big bro's got you covered. (Avoid prison once)";
                 keep = 1;
                 break;
             case 13:
-                descr = "今天我生日，向所有玩家索取最多20$ (其他玩家最多支付到沒有現金)";
+                descr = "Today is my birthday! Receive up to $20 from all players. (Until they run out of balance)";
                 break;
             case 14:
-                descr = "過年返鄉，移動到最近的所有地 (如果沒有的話就移動到起點)";
+                descr = "Returning to your hometown for Chinese New Year, you move to your closest property. (Or back to start if there is None)";
                 break;
             case 15:
-                descr = "囤房稅2.0上線，每持有一棟房屋繳1$，每持有一棟旅館繳5$";
+                descr = "The multi-house tax 2.0 is now in effect. Pay $1 for every house and $5 for every hotel you own.";
                 break;
             case 16:
-                descr = "獲得租金補貼(免繳過路費1次，可保留)";
+                descr = "Your rent subsidy application got approved. You do not need to pay rent for the next property you encounter.";
                 keep = 2;
                 break;
             case 17:
-                descr = "刮刮樂中獎，獲得200$";
+                descr = "You won $200 from some scratch-offs.";
                 break;
             case 18:
-                descr = "發票中獎，獲得100$";
+                descr = "You received $100 for winning the lottery.";
                 break;
             case 19:
-                descr = "公司賺錢，老闆加薪，獲得10$";
+                descr = "The company you're in is doing quite well this season, so the boss gave your salary a boost. Receive $10.";
                 break;
             case 20:
-                descr = "出門旅遊住民宿被當盤子，損失150$";
+                descr = "You went to an overpriced Airbnb on vacation. Lose $150.";
                 break;
             default:
-                descr = "揭露官商勾結，被查水表 (你不該看到這張卡，如果看到了，請回報bug)";
+                descr = "Man how do you keep getting these? (Report a bug if you see this)";
                 break;
         }
     }
