@@ -20,13 +20,26 @@ using namespace std;
         一般土地過路費*3 (Field::calcRent())
         Timeout 10s (void game() -> alarm())
 
-
+    待改:
+        每次送訊息給所有人就要初始化一個vector, not good
+    還沒改完io:
+        setBankrupt, checkbuy, sell
 */
 
 
 
 static void sig_alrm(int signo) {
     return;
+}
+
+void sig_chld(int signo)
+{
+	pid_t	pid;
+	int		stat;
+
+	pid = wait(&stat);
+	printf("child %d terminated\n", pid);
+	return;
 }
 
 class Gameboard;
@@ -37,16 +50,84 @@ class Field;
 
 
 struct WaitingRoom {
-    int playerNum;
+    int playerNum = 0;
     string playerNames[8];
     int sockfds[8];
+    void addPlayer(char *name, int connfd) {
+        this->playerNames[this->playerNum] = string(name);
+        this->sockfds[this->playerNum++] = connfd;
+    }
+    void addPlayer(string name, int connfd) {
+        this->playerNames[this->playerNum] = name;
+        this->sockfds[this->playerNum++] = connfd;
+    }
 };
+
+void sendToUser(int sockfd, char *str) {
+    Writen(sockfd, str, strlen(str));
+}
+void sendToUser(int sockfd, string &str) {
+    Writen(sockfd, const_cast<char *>(str.c_str()), str.size());
+}
+
+void sendToAllLivePlayer(Gameboard *board, char *str);
+void sendToAllLivePlayer(Gameboard *board, string &str);
+
+void commandMove(string &s, int playerId, int steps) {
+    if (s.back() == '\n') s.pop_back();
+    s.append("balance ").append(to_string(playerId)).append(" ").append(to_string(steps)).append("/\n");    
+}
+void commandBuild(string &s, int propertyId, int num) {
+    if (s.back() == '\n') s.pop_back();
+    s.append("build ").append(to_string(propertyId)).append(" ").append(to_string(num)).append("/\n");    
+}
+void commandLog(string &s, string &msg) {
+    if (s.back() == '\n') s.pop_back();
+    s.append("log ").append(msg).append("/\n");    
+}
+void commandBalance(string &s, int num) {
+    if (s.back() == '\n') s.pop_back();
+    s.append("balance ").append(to_string(num)).append("/\n");    
+}
+void commandMoveTo(string &s, int playerId, int index) {
+    if (s.back() == '\n') s.pop_back();
+    s.append("moveto ").append(to_string(playerId)).append(" ").append(to_string(index)).append("/\n");    
+}
+void commandRoll(string &s) {
+    if (s.back() == '\n') s.pop_back();
+    s.append("roll/\n");    
+}
+void commandAskToBuy(string &s) {
+    if (s.back() == '\n') s.pop_back();
+    s.append("asktobuy/\n");    
+}
+void commandAskToSell(string &s) {
+    if (s.back() == '\n') s.pop_back();
+    s.append("asktosell/\n");    
+}
+void commandRemPlayer(string &s, int playerId) {
+    if (s.back() == '\n') s.pop_back();
+    s.append("remplayer ").append(to_string(playerId).append("/\n"));    
+}
+void commandOwnProp(string &s, int playerId, int propertyId) {
+    if (s.back() == '\n') s.pop_back();
+    s.append("ownprop ").append(to_string(playerId).append(" ").append(to_string(propertyId)).append("/\n"));    
+}
+void commandAddProp(string &s, string &str) {
+    if (s.back() == '\n') s.pop_back();
+    s.append("addprop ").append(str).append("/\n");    
+}
+void commandRemProp(string &s, string &str) {
+    if (s.back() == '\n') s.pop_back();
+    s.append("remprop ").append(str).append("/\n");    
+}
+
 
 
 
 class Card {    // 機會 or 命運卡
     public:
-        Card(): cardType(0), effect(0), keep(0), desciption("一張卡") {}
+        Card(): cardType(0), effect(0), keep(0), desciption("a card") {}
         Card(int cardType, int effect, int keep, string descr): cardType(cardType), effect(effect), keep(keep), desciption(descr) {}
         void execute(Player *player);
         int canKeep() const {return this->keep;}
@@ -55,7 +136,7 @@ class Card {    // 機會 or 命運卡
         int cardType = 0; // 0:機會 1:命運
         int effect = 0; // 0:Empty
         int keep = 0; // 0:不可保留 1:no jail 2:no rent
-        string desciption = "一張卡";
+        string desciption = "a card";
 };
 
 #define CHANCE_CARD_TYPE_NUM 20
@@ -284,10 +365,17 @@ class Player {
         void resetPassedStart() {this->passedStart = 0;}
         void earn(int n) {
             this->money += n;
+            string s = "";
+            commandBalance(s, n);
+            sendToUser(this->sockfd, s);
         }
         void pay(int n);
         void payToPlayer(Player *other, int n) {
             other->earn(n);
+            string s = "", msg = "";
+            msg.append(this->name).append(" paid ").append(other->name).append(" $").append(to_string(n));
+            commandLog(s, msg);
+            sendToAllLivePlayer(this->gameboard, s);
             cout << this->name << " 付給 " << other->name << " " << n << "$\n";
             this->pay(n);
         }
@@ -299,22 +387,38 @@ class Player {
                 this->inJail = 1;
                 this->lastMove = {(this->position + 10)%40, 0};
                 this->position = 10;
+                string s = "", msg = "";
+                commandMoveTo(s, this->id, 10);
+                msg.append(this->name).append(" was send to the jail, 3 turns left.");
+                commandLog(s, msg);
+                sendToAllLivePlayer(this->gameboard, s);
                 cout << this->name << " 被關進監獄了，剩餘 3 回合\n";
             }
         }
         void tryEscapeJail() {
             if (this->inJail >= 3) {
                 this->inJail = 0;
+                string s = "", msg = "";
+                msg.append(this->name).append(" was released from the jail.");
+                commandLog(s, msg);
                 cout << this->name << " 從監獄中被釋放了\n";
+                sendToAllLivePlayer(this->gameboard, s);
                 this->lastMove = roll();
             } else {
                 Dice dice = roll();
                 if (dice.d1 == dice.d2) {
                     this->inJail = 0;
                     this->lastMove = dice;
-                    cout << this->name << " 從監獄中被釋放了\n";
+                    string s = "", msg = "";
+                    msg.append(this->name).append(" was released from the jail.");
+                    commandLog(s, msg);
+                    sendToAllLivePlayer(this->gameboard, s);
                 } else {
                     cout << this->name << " 逃獄失敗，剩餘 " << 3 - this->inJail << " 回合\n";
+                    string s = "", msg = "";
+                    msg.append(this->name).append(" failed to escape, ").append(to_string(3 - this->inJail)).append(" turns left.");
+                    commandLog(s, msg);
+                    sendToAllLivePlayer(this->gameboard, s);
                     this->inJail++;
                 }
                 
@@ -333,6 +437,7 @@ class Player {
         int getHouseNum();
         int getFieldNum();
         void earthquake();
+        Gameboard *getBoard() {return this->gameboard;}
     private:
         int id;
         string name;
@@ -344,7 +449,7 @@ class Player {
         int passedStart = 0;
         Gameboard *gameboard = nullptr;
         int inJail = 0;
-        int getUserInput(int &input);
+        int getUserInput(char *buf);
 };
 
 
@@ -365,10 +470,10 @@ struct RentInfo {
 
 class Field {   // 格子
     public:
-        Field(): type(0), name("") {fill_n(this->siblings, 3, nullptr);}
-        Field(int type, string name, Gameboard *board): type(type), name(name), gameboard(board) {fill_n(this->siblings, 3, nullptr);}
-        Field(int type, string name, int tax, Gameboard *board): type(type), name(name), rentInfo({0,tax,0,0,0,0,0,0}), gameboard(board) {fill_n(this->siblings, 3, nullptr);}
-        Field(int type, string name, int color, RentInfo rentInfo, Gameboard *board): type(type), name(name), color(color), rentInfo(rentInfo), gameboard(board) {fill_n(this->siblings, 3, nullptr);}
+        Field(): type(0), name(""), index(0) {fill_n(this->siblings, 3, nullptr);}
+        Field(int type, string name, int index, Gameboard *board): type(type), name(name), index(index), gameboard(board) {fill_n(this->siblings, 3, nullptr);}
+        Field(int type, string name, int index, int tax, Gameboard *board): type(type), name(name), index(index), rentInfo({0,tax,0,0,0,0,0,0}), gameboard(board) {fill_n(this->siblings, 3, nullptr);}
+        Field(int type, string name, int index, int color, RentInfo rentInfo, Gameboard *board): type(type), name(name), index(index), color(color), rentInfo(rentInfo), gameboard(board) {fill_n(this->siblings, 3, nullptr);}
         void setSibling(Field *sib) {this->siblings[this->siblingNum++] = sib;}
         RentInfo getRentInfo() const {return this->rentInfo;}
         int getTax() const {return ((this->type == 9) ? this->rentInfo.rent : 0);}
@@ -382,8 +487,12 @@ class Field {   // 格子
                 // 0:Empty 1:起點 2:土地 3:車站 4:公共事業 5:機會 6:命運 7:入獄 8:監獄 9:稅
                 case 1:
                     if (player->getPassedStart()) {
-                        player->earn(1);
-                        cout << player->getName() << " 經過起點, 獲得 1 $\n";
+                        player->earn(200);
+                        cout << player->getName() << " 經過起點, 獲得$200\n";
+                        string s = "", msg = "";
+                        msg.append(player->getName()).append(" passed the START, earn $200.");
+                        commandLog(s, msg);
+                        sendToAllLivePlayer(this->gameboard, s);
                         player->resetPassedStart();
                     }
                     break;
@@ -430,6 +539,10 @@ class Field {   // 格子
                 }
                 case 5: {
                     Card card = randCard(0);
+                    string s = "", msg = "";
+                    msg.append(player->getName()).append(" drawn \"").append(card.getDesciption()).append("\"");
+                    commandLog(s, msg);
+                    sendToAllLivePlayer(this->gameboard, s);
                     cout << player->getName() << "抽到 \"" << card.getDesciption() << "\"\n";
                     if (card.canKeep()) {
                         player->keepCard(card);
@@ -440,6 +553,10 @@ class Field {   // 格子
                 }
                 case 6: {
                     Card card = randCard(1);
+                    string s = "", msg = "";
+                    msg.append(player->getName()).append(" drawn \"").append(card.getDesciption()).append("\"");
+                    commandLog(s, msg);
+                    sendToAllLivePlayer(this->gameboard, s);
                     cout << player->getName() << "抽到 \"" << card.getDesciption() << "\"\n";
                     if (card.canKeep()) {
                         player->keepCard(card);
@@ -455,13 +572,22 @@ class Field {   // 格子
                     if (player->isInJail()) {
                         player->tryEscapeJail();
                     } else {
+                        string s = "", msg = "";
+                        msg.append(player->getName()).append(" just passed by.");
+                        commandLog(s, msg);
+                        sendToAllLivePlayer(this->gameboard, s);
                         cout << player->getName() << " 只是經過\n";
                     }
                     break;
-                case 9:
+                case 9: {
+                    string s = "", msg = "";
+                    msg.append(player->getName()).append(" paid ").append(this->name).append(" $").append(to_string(this->getTax())).append(".");
+                    commandLog(s, msg);
+                    sendToAllLivePlayer(this->gameboard, s);
                     cout << player->getName() << " 支付 " << this->name << " " << this->getTax() << "$\n";
                     player->pay(this->getTax());
                     break;
+                }    
                 default:
                     break;
             }
@@ -469,39 +595,68 @@ class Field {   // 格子
         }
         void checkBuy(Player *player) {
             if (player->getMoney() >= this->rentInfo.cost) {
-                int buy;
-                cout << "是否購買 " << this->name << " (" << this->rentInfo.cost << "$) ? 0:no 1:yes\n";
-                if (this->getUserInput(buy) <= 0) return;
-                while ((buy != 0) && (buy != 1)) {
-                    cout << "invalid input\n";
-                    if (this->getUserInput(buy) <= 0) return;
-                }
-                if (buy == 1) {
+                string s = "", msg = "";
+                msg.append("Do you want to by ").append(this->name).append(" ($").append(to_string(this->rentInfo.cost)).append(")?");
+                commandAskToBuy(s);
+                commandLog(s, msg);
+                sendToUser(player->getSockfd(), s);
+                //cout << "是否購買 " << this->name << " (" << this->rentInfo.cost << "$) ? 0:no 1:yes\n";
+                char buf[MAXLINE];
+                this->getUserInput(buf);
+                if (strcmp(buf, "No\n") == 0) {
+                    return;
+                } else if (strcmp(buf, "Yes\n") == 0) {
                     player->pay(this->rentInfo.cost);
                     this->owner = player;
+                    /*
+                    
+                    
+                        ?
+                    
+                    
+                    */
+                    string s = "", msg = "";
+                    msg.append(this->name).append(" $").append(to_string(this->rentInfo.cost/2)).append(" | $").append(to_string(this->rentInfo.houseCost/2));
+                    commandAddProp(s, msg);
+                    sendToUser(player->getSockfd(), s);
+                    s = "";
+                    msg = "";
+                    msg.append(player->getName()).append(" buyed ").append(this->name).append(".");
+                    commandOwnProp(s, player->getId(), this->index);
+                    commandLog(s, msg);
+                    sendToAllLivePlayer(this->gameboard, s);
                     cout << player->getName() << " 購買了 " << this->name << "\n";
                 }
+                
             } else {
-                cout << "金錢不足，無法購買\n";
+                //cout << "金錢不足，無法購買\n";
+                string s = "", msg = "You don\'t have enough money to buy this property.";
+                commandLog(s, msg);
+                sendToUser(player->getSockfd(), s);
             }
         }
         void checkBuildHouse(Player *player) {
             if (this->house < 5) {
                 if (player->getMoney() >= this->rentInfo.houseCost) {
-                    int buy;
-                    cout << "是否在 " << this->name << ((this->house == 4) ? " 蓋旅館 (" : " 蓋房子 (") << this->rentInfo.houseCost << "$) ? 0:no 1:yes\n";
-                    if (this->getUserInput(buy) <= 0) return;
-                    while ((buy != 0) && (buy != 1)) {
-                        cout << "invalid input\n";
-                        if (this->getUserInput(buy) <= 0) return;
-                    }
-                    if (buy == 1) {
+                    char buf[MAXLINE];
+                    sprintf(buf, "asktobuy/log Do you want to build a %s on %s ($%d)?/\n", ((this->house == 4) ? "hotel" : "house"), this->name.c_str(), this->rentInfo.houseCost);
+                    sendToUser(player->getSockfd(), buf);
+                    //cout << "是否在 " << this->name << ((this->house == 4) ? " 蓋旅館 (" : " 蓋房子 (") << this->rentInfo.houseCost << "$) ? 0:no 1:yes\n";
+                    this->getUserInput(buf);
+                    if (strcmp(buf, "No\n") == 0) {
+                        return;
+                    } else if (strcmp(buf, "Yes\n") == 0) {
                         player->pay(this->rentInfo.houseCost);
                         this->house++;
+                        sprintf(buf, "build %d/log %s build a %s on %s./\n", this->index, player->getName().c_str(), ((this->house == 4) ? "hotel" : "house"), this->name.c_str());
+                        sendToAllLivePlayer(this->gameboard, buf);
                         cout << player->getName() << " 在 " << this->name << ((this->house == 5) ? " 蓋了旅館\n" : " 蓋了房子\n");
                     }
                 } else {
-                    cout << "金錢不足，無法蓋" << ((this->house == 4) ? "旅館\n" : "房子\n");
+                    char buf[MAXLINE];
+                    sprintf(buf, "log You don\'t have enough money to build a %s./\n", ((this->house == 4) ? "hotel" : "house"));
+                    sendToUser(player->getSockfd(), buf);
+                    //cout << "金錢不足，無法蓋" << ((this->house == 4) ? "旅館\n" : "房子\n");
                 }
             }
             
@@ -573,22 +728,31 @@ class Field {   // 格子
             if (this->house < 0) {
                 this->house = 0;
             }
+            string s = "";
+            commandBuild(s, this->index, -n);
+            sendToAllLivePlayer(this->gameboard, s);
         }
         void sell() {
             this->owner = nullptr;
+            /*
+            
+                ?need de owner
+            
+            */
             this->house = 0;
         }
     private:
         int type; // 0:Empty 1:起點 2:土地 3:車站 4:公共事業 5:機會 6:命運 7:入獄 8:監獄 9:稅
         string name; // for all
         Player *owner = nullptr; // for type 2, 3, 4
+        int index;
         int house = 0; // for type 2, if house == 5, it's hotel
         int color = 0; // 0:brown 1:skyblue 2:pink 3:orange 4:red 5:yellow 6:green 7:blue for type 2
         int siblingNum = 0; // 同顏色的地or車站的數量 for type 2, 3
         Field *siblings[3]; // 同顏色的地or車站 for type 2, 3
         RentInfo rentInfo = {0,0,0,0,0,0,0,0};
         Gameboard *gameboard = nullptr;
-        int getUserInput(int &input);
+        int getUserInput(char *buf);
 };
 
 
@@ -598,16 +762,19 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
             this->players = new Player[8];
             this->bankruptStat = new int[8]{0};
             this->fields = new Field[40];
+            this->survivors = new vector<Player*>();
             this->initGame();
         }
         Gameboard(WaitingRoom *room): playerNum(room->playerNum) {
             this->players = new Player[room->playerNum];
             this->bankruptStat = new int[room->playerNum];
             this->fields = new Field[40];
+            this->survivors = new vector<Player*>();
             for (int i = 0; i < room->playerNum; i++) {
                 this->bankruptStat[i] = 0;
                 this->players[i] = Player(i, (room->playerNames)[i], (room->sockfds)[i], this);
                 cout << (room->playerNames)[i] << " 加入遊戲\n";
+                this->survivors->push_back(&(this->players[i]));
             }
             this->initGame();
         }
@@ -615,19 +782,22 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
             delete[] this->players;
             delete[] this->bankruptStat;
             delete[] this->fields;
+            delete this->survivors;
         }
         void setField(int num, int type, string name) {
-            this->fields[num] = Field(type, name, this);
+            this->fields[num] = Field(type, name, num, this);
         }
         void setField(int num, int type, string name, int tax) {
-            this->fields[num] = Field(type, name, tax, this);
+            this->fields[num] = Field(type, name, num, tax, this);
         }
         void setField(int num, int type, string name, int color, RentInfo rentInfo) {
-            this->fields[num] = Field(type, name, color, rentInfo, this);
+            this->fields[num] = Field(type, name, num, color, rentInfo, this);
         }
         Field* getField(int num) {
             return &(this->fields[num]);
         }
+        int getPlayerNumber() const {return this->playerNum;}
+        Player* getPlayer(int id) {return &(this->players[id]);}
         Player* getTurnPlayer() {
             return &(this->players[this->turnPlayer]);
         }
@@ -651,6 +821,17 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
                     }
                 } while (bankruptStat[this->turnPlayer]);
                 cout << "現在是 " << this->players[this->turnPlayer].getName() << " 的回合\n";
+                char buf[MAXLINE];
+                sprintf(buf, "log ----------It\'s %s\'s turn.----------/\n", this->players[this->turnPlayer].getName().c_str());
+                ;
+                cout << "OK\n" << buf;
+                /*
+                for (int i = 0; i < this->getSurvivors()->size(); i++) {
+                    cout << this->getSurvivors()->at(i)->getSockfd() << " ";
+                }*/
+                cout << this->survivors->size() << "\n";
+                //sendToAllLivePlayer(this, buf);
+                
                 cout << "現在狀況: ";
                 for (int i = 0; i < this->playerNum; i++) {
                     if (this->bankruptStat[i] == 0) {
@@ -683,11 +864,31 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
             }
             return "";
         }
+        /*
+        
+        
+        
+        
+        
+        
+        
+        */
         void setBankrupt(int id) {
             this->bankruptStat[id] = 1;
             for (int i = 0; i < 40; i++) {
                 if (this->fields[i].getOwner() == &(this->players[id])) {
                     this->fields[i].sell();
+                }
+            }
+            string s = "";
+            commandRemPlayer(s, id);
+            sendToAllLivePlayer(this, s);
+            for (int i = 0; i < (int)(this->survivors->size()); i++) {
+                if (this->survivors->at(i) == &(this->players[id])) {
+                    for (int j = i; j < (int)(this->survivors->size()-1); j++) {
+                        this->survivors[j] = this->survivors[j+1];
+                    }
+                    this->survivors->pop_back();
                 }
             }
         }
@@ -758,8 +959,14 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
                         int n = this->fields[i].getHouse();
                         if (n > 0) {
                             this->fields[i].demolish(n);
+                            char buf[MAXLINE];
+                            sprintf(buf, "log Earthquake at %s, all houses was destroyed./\n", this->fields[i].getName().c_str());
+                            sendToAllLivePlayer(this, buf);
                             cout << this->fields[i].getName() << " 發生地震，所有房屋都被震毀了\n";
                         } else {
+                            char buf[MAXLINE];
+                            sprintf(buf, "log Earthquake at %s, but no house destroyed./\n", this->fields[i].getName().c_str());
+                            sendToAllLivePlayer(this, buf);
                             cout << this->fields[i].getName() << " 發生地震，所幸沒有房屋被震毀\n";
                         }
                     }
@@ -768,21 +975,38 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
         }
         void turnPlayerTimeout() {
             this->setBankrupt(this->turnPlayer);
+            string s = "", msg = "";
+            msg.append(this->getTurnPlayer()->getName()).append(" timeout, regarded as bankrupt.");
+            commandLog(s, msg);
+            sendToAllLivePlayer(this, s);
             cout << this->getTurnPlayer()->getName() << " 超時，已宣告破產\n";
         }
         void playerTimeout(int id) {
             this->setBankrupt(id);
+            string s = "", msg = "";
+            msg.append(this->getTurnPlayer()->getName()).append(" timeout, regarded as bankrupt.");
+            commandLog(s, msg);
+            sendToAllLivePlayer(this, s);
             cout << this->players[id].getName() << " 超時，已宣告破產\n";
         }
         void turnPlayerLeave() {
             this->setBankrupt(this->turnPlayer);
+            string s = "", msg = "";
+            msg.append(this->getTurnPlayer()->getName()).append(" left the game.");
+            commandLog(s, msg);
+            sendToAllLivePlayer(this, s);
             cout << this->getTurnPlayer()->getName() << " 已離開遊戲\n";
         }
         void playerLeave(int id) {
             this->setBankrupt(id);
+            string s = "", msg = "";
+            msg.append(this->getTurnPlayer()->getName()).append(" left the game.");
+            commandLog(s, msg);
+            sendToAllLivePlayer(this, s);
             cout << this->players[id].getName() << " 已離開遊戲\n";
         }
-        int getUserInput(int &input);
+        int getUserInput(char *buf);
+        vector<Player*> *getSurvivors() {return this->survivors;}
         void initGame () {
             // 0:Empty 1:起點 2:土地 3:車站 4:公共事業 5:機會 6:命運 7:入獄 8:監獄 9:稅
             // 0:brown 1:skyblue 2:pink 3:orange 4:red 5:yellow 6:green 7:blue
@@ -817,46 +1041,46 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
                 苗栗    27.65
                 基隆    24.43
             */
-            this->setField(0, 1, "起點");
-            this->setField(1, 2, "基隆市", 0, {60,2,10,30,90,160,250,50});
-            this->setField(2, 6, "命運");
-            this->setField(3, 2, "苗栗國(縣)", 0, {60,4,20,60,180,320,450,50});
-            this->setField(4, 9, "所得稅", 200);
-            this->setField(5, 3, "臺東火車站", 0, {200,25,50,100,200,0,0,0});
-            this->setField(6, 2, "澎湖縣", 1, {100,6,30,90,270,400,550,50});
-            this->setField(7, 5, "機會");
-            this->setField(8, 2, "金門縣", 1, {100,6,30,90,270,400,550,50});
-            this->setField(9, 2, "連江縣", 1, {120,8,40,100,300,450,600,50});
-            this->setField(10, 8, "綠島監獄");
-            this->setField(11, 2, "臺東縣", 2, {140,10,50,150,450,625,750,100});
-            this->setField(12, 4, "台灣電力公司", 0, {150,4,10,0,0,0,0,0});
-            this->setField(13, 2, "花蓮縣", 2, {140,10,50,150,450,625,750,100});
-            this->setField(14, 2, "宜蘭縣", 2, {160,12,60,180,500,700,900,100});
-            this->setField(15, 3, "臺南火車站", 0, {200,25,50,100,200,0,0,0});
-            this->setField(16, 2, "屏東縣", 3, {180,14,70,200,550,750,950,100});
-            this->setField(17, 6, "命運");
-            this->setField(18, 2, "高雄市", 3, {180,14,70,200,550,750,950,100});
-            this->setField(19, 2, "臺南市", 3, {200,16,80,220,600,800,1000,100});
-            this->setField(20, 0, "免費停車");
-            this->setField(21, 2, "嘉義市", 4, {220,18,90,250,700,875,1050,150});
-            this->setField(22, 5, "機會");
-            this->setField(23, 2, "嘉義縣", 4, {220,18,90,250,700,875,1050,150});
-            this->setField(24, 2, "雲林縣", 4, {240,20,100,300,750,925,1100,150});
-            this->setField(25, 3, "臺中火車站", 0, {200,25,50,100,200,0,0,0});
-            this->setField(26, 2, "南投縣", 5, {260,22,110,330,800,975,1150,150});
-            this->setField(27, 2, "彰化縣", 5, {260,22,110,330,800,975,1150,150});
-            this->setField(28, 4, "台灣自來水公司", 0, {150,4,10,0,0,0,0,0});
-            this->setField(29, 2, "臺中市", 5, {280,24,120,360,850,1025,1200,150});
-            this->setField(30, 7, "入獄");
-            this->setField(31, 2, "新竹縣", 6, {300,26,130,390,900,1100,1275,200});
-            this->setField(32, 2, "新竹市", 6, {300,26,130,390,900,1100,1275,200});
-            this->setField(33, 6, "命運");
-            this->setField(34, 2, "桃園市", 6, {320,28,150,450,1000,1200,1400,200});
-            this->setField(35, 3, "臺北火車站", 0, {200,25,50,100,200,0,0,0});
-            this->setField(36, 5, "機會");
-            this->setField(37, 2, "新北市", 7, {350,35,175,500,1100,1300,1500,200});
-            this->setField(38, 9, "奢侈稅", 100);
-            this->setField(39, 2, "臺北市", 7, {400,50,200,600,1400,1700,2000,200});
+            this->setField(0, 1, "START");
+            this->setField(1, 2, "Keelung City", 0, {60,2,10,30,90,160,250,50});
+            this->setField(2, 6, "DESTINY");
+            this->setField(3, 2, "Miaoli Count(r)y", 0, {60,4,20,60,180,320,450,50});
+            this->setField(4, 9, "INCOME TAX", 200);
+            this->setField(5, 3, "Taitung Train Station", 0, {200,25,50,100,200,0,0,0});
+            this->setField(6, 2, "Penghu County", 1, {100,6,30,90,270,400,550,50});
+            this->setField(7, 5, "CHANCE");
+            this->setField(8, 2, "Kinmen County", 1, {100,6,30,90,270,400,550,50});
+            this->setField(9, 2, "Lianjian County", 1, {120,8,40,100,300,450,600,50});
+            this->setField(10, 8, "JAIL");
+            this->setField(11, 2, "Taitung County", 2, {140,10,50,150,450,625,750,100});
+            this->setField(12, 4, "Taiwan Power Company", 0, {150,4,10,0,0,0,0,0});
+            this->setField(13, 2, "Hualien County", 2, {140,10,50,150,450,625,750,100});
+            this->setField(14, 2, "Yilan County", 2, {160,12,60,180,500,700,900,100});
+            this->setField(15, 3, "Tainan Train Station", 0, {200,25,50,100,200,0,0,0});
+            this->setField(16, 2, "Pingtun County", 3, {180,14,70,200,550,750,950,100});
+            this->setField(17, 6, "DESTINY");
+            this->setField(18, 2, "Kaohsiung City", 3, {180,14,70,200,550,750,950,100});
+            this->setField(19, 2, "Tainan City", 3, {200,16,80,220,600,800,1000,100});
+            this->setField(20, 0, "FREE PARKING");
+            this->setField(21, 2, "Chiayi City", 4, {220,18,90,250,700,875,1050,150});
+            this->setField(22, 5, "CHANCE");
+            this->setField(23, 2, "Chiayi County", 4, {220,18,90,250,700,875,1050,150});
+            this->setField(24, 2, "Yunlin County", 4, {240,20,100,300,750,925,1100,150});
+            this->setField(25, 3, "Taichung Train Station", 0, {200,25,50,100,200,0,0,0});
+            this->setField(26, 2, "Nantou County", 5, {260,22,110,330,800,975,1150,150});
+            this->setField(27, 2, "Changhua County", 5, {260,22,110,330,800,975,1150,150});
+            this->setField(28, 4, "Taiwan Water Corporation", 0, {150,4,10,0,0,0,0,0});
+            this->setField(29, 2, "Taichung City", 5, {280,24,120,360,850,1025,1200,150});
+            this->setField(30, 7, "GO TO JAIL");
+            this->setField(31, 2, "Hsinchu County", 6, {300,26,130,390,900,1100,1275,200});
+            this->setField(32, 2, "Hsinchu City", 6, {300,26,130,390,900,1100,1275,200});
+            this->setField(33, 6, "DESTINY");
+            this->setField(34, 2, "Taoyuan City", 6, {320,28,150,450,1000,1200,1400,200});
+            this->setField(35, 3, "Taipei Train Station", 0, {200,25,50,100,200,0,0,0});
+            this->setField(36, 5, "CHANCE");
+            this->setField(37, 2, "New Taipei City", 7, {350,35,175,500,1100,1300,1500,200});
+            this->setField(38, 9, "LUXURY TAX", 100);
+            this->setField(39, 2, "Taipei City", 7, {400,50,200,600,1400,1700,2000,200});
 
             this->fields[1].setSibling(&(this->fields[3]));
             this->fields[3].setSibling(&(this->fields[1]));
@@ -924,26 +1148,39 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
         int turnPlayer = -1;
         int end = 0;
         int sameTurnPlayer = 0;
+        vector<Player*> *survivors;
 };
 
 
 
 
 void Player::pay(int n) {
-    this->money -= n;
-    if ((this->money < 0) && !(this->gameboard->isPlayerBankrupt(this->id))) {
-        if (!(this->sellForMoney())) {
-            this->declareBankrupt();
+    if (!(this->gameboard->isPlayerBankrupt(this->id))) {
+        this->money -= n;
+        string s = "";
+        commandBalance(s, -n);
+        sendToUser(this->sockfd, s);
+        if ((this->money < 0)) {
+            if (!(this->sellForMoney())) {
+                this->declareBankrupt();
+            }
         }
     }
 }
 void Player::declareBankrupt() {
     this->gameboard->setBankrupt(this->id);
+    string s = "", msg = "";
+    msg.append(this->name).append(" bankrupted.");
+    commandLog(s, msg);
+    sendToAllLivePlayer(this->gameboard, s);
     cout << this->name << " 破產了\n";
 }
-void printPriceList(vector<Price> &v) {
+void printPriceList(vector<Price> &v, string &s) {
     for (int i = 0; i < (int)(v.size()); i++) {
         if (v[i].fieldType == 2) {
+            string msg = "";
+            msg.append("\t").append(v[i].fieldName).append(": $").append(to_string(v[i].fieldPrice+v[i].housePrice*(v[i].house+v[i].hotel*5)));
+            commandLog(s, msg);
             cout << "\t" << i+1 << ". " << v[i].fieldName << ":\n\t\t";
             if (v[i].house > 0) {
                 cout << "房屋*" << v[i].house << "(單價" << v[i].housePrice << "$)   ";
@@ -953,11 +1190,14 @@ void printPriceList(vector<Price> &v) {
             }
             cout << "土地(" << v[i].fieldPrice << "$)   總共(" << v[i].fieldPrice+v[i].housePrice*(v[i].house+v[i].hotel*5) << "$)\n";
         } else if ((v[i].fieldType == 3) || (v[i].fieldType == 4)) {
+            string msg = "";
+            msg.append("\t").append(v[i].fieldName).append(": $").append(to_string(v[i].fieldPrice));
+            commandLog(s, msg);
             cout << "\t" << i+1 << ". " << v[i].fieldName << ":\n\t\t土地(" << v[i].fieldPrice << "$)\n";
         }
     }
 }
-int Player::getPriceList (vector<Price> &v) {
+int Player::getPriceList(vector<Price> &v) {
     v.clear();
     int sum = 0;
     for (int i = 0; i < 40; i++) {
@@ -985,6 +1225,10 @@ int Player::getPriceList (vector<Price> &v) {
     return sum;
 }
 void Player::printMove() {
+    char buf[MAXLINE];
+    int m = this->lastMove.d1 + this->lastMove.d2;
+    sprintf(buf, "move %d %d/log %s moved %d steps to %s./\n", this->id, m, this->name.c_str(), m, this->gameboard->getField(this->position)->getName().c_str());
+    sendToAllLivePlayer(this->gameboard, buf);
     cout << this->name << " 走了 " << this->lastMove.d1 + this->lastMove.d2 << " 步，來到 " << this->gameboard->getField(this->position)->getName() << "\n";
 }
 void Player::triggerCurrentField() {
@@ -996,25 +1240,33 @@ int Player::sellForMoney() { // return 0:money not enough -> bankrupt  1:money n
         return 0;
     }
     while ((this->money < 0) && !(priceList.empty())) {
-        cout << "現在可販售(缺" << -this->money << "$):\n";
-        printPriceList(priceList);
-        int fNum;
-        cout << "選擇要販售的土地(編號): ";
-        if (this->getUserInput(fNum) <= 0) return 1;
-        while ((fNum <= 0) || (fNum > (int)(priceList.size()))) {
-            cout << "invalid input\n";
-            if (this->getUserInput(fNum) <= 0) return 1;
+        //cout << "現在可販售(缺" << -this->money << "$):\n";
+        string s = "";
+        commandAskToSell(s);
+        printPriceList(priceList, s);
+        sendToUser(this->sockfd, s);
+        char buf[MAXLINE];
+        int propIndex, fNum = 0;
+        //cout << "選擇要販售的土地(編號): ";
+        if (this->getUserInput(buf) <= 0) return 1;
+        sscanf(buf, "%d", &propIndex);
+        for (int i = 0; i < (int)(priceList.size()); i++) {
+            if (priceList[i].fieldNum == propIndex) {
+                fNum = i;
+                break;
+            }
         }
-        if (priceList[fNum-1].fieldType == 2) {
-            if (priceList[fNum-1].house > 0) {
-                int onlyHouse;
-                cout << "只販售房屋? 0:no 1:yes :";
-                if (this->getUserInput(onlyHouse) <= 0) return 1;
-                while ((onlyHouse != 0) && (onlyHouse != 1)) {
-                    cout << "invalid input\n";
-                    if (this->getUserInput(onlyHouse) <= 0) return 1;
-                }
-                if (onlyHouse) {
+        if (priceList[fNum].fieldType == 2) {
+            
+            if (priceList[fNum].house > 0) {
+                //int onlyHouse;
+                //cout << "只販售房屋? 0:no 1:yes :";
+                //if (this->getUserInput(onlyHouse) <= 0) return 1;
+                //while ((onlyHouse != 0) && (onlyHouse != 1)) {
+                //    cout << "invalid input\n";
+                //    if (this->getUserInput(onlyHouse) <= 0) return 1;
+                //}
+                /*if (onlyHouse) {
                     int hNum;
                     if (priceList[fNum-1].house == 1) {
                         hNum = 1;
@@ -1029,16 +1281,21 @@ int Player::sellForMoney() { // return 0:money not enough -> bankrupt  1:money n
                     cout << this->name << " 販售 " << hNum << " 間房子，得到 " << priceList[fNum-1].housePrice * hNum << "$\n";
                     priceList[fNum-1].house -= hNum;
                     this->gameboard->getField(priceList[fNum-1].fieldNum)->demolish(hNum);
-                } else {
-                    this->earn(priceList[fNum-1].housePrice * priceList[fNum-1].house + priceList[fNum-1].fieldPrice);
-                    cout << this->name << " 販售 " << priceList[fNum-1].fieldName << " ，得到 " << priceList[fNum-1].housePrice * priceList[fNum-1].house + priceList[fNum-1].fieldPrice << "$\n";
-                    this->gameboard->getField(priceList[fNum-1].fieldNum)->sell();
-                    for (int i = fNum; i < (int)(priceList.size()); i++) {
-                        priceList[i-1] = priceList[i]; 
+                } else {*/
+                    this->earn(priceList[fNum].housePrice * priceList[fNum].house + priceList[fNum].fieldPrice);
+                    string s = "", msg = "";
+                    msg.append(this->name).append(" sold ").append(priceList[fNum].fieldName).append(" for $").append(to_string(priceList[fNum].housePrice * priceList[fNum].house + priceList[fNum].fieldPrice));
+                    commandLog(s, msg);
+                    cout << this->name << " 販售 " << priceList[fNum].fieldName << " ，得到 " << priceList[fNum].housePrice * priceList[fNum].house + priceList[fNum].fieldPrice << "$\n";
+                    this->gameboard->getField(priceList[fNum].fieldNum)->sell();
+                    for (int i = fNum; i < (int)(priceList.size()-1); i++) {
+                        priceList[i] = priceList[i+1]; 
                     }
                     priceList.pop_back();
-                }
+                    sendToAllLivePlayer(this->gameboard, s);
+                //}
             } else if (priceList[fNum-1].hotel > 0) {
+                /*
                 int onlyHotel;
                 cout << "只販售旅館? 0:no 1:yes :";
                 if (this->getUserInput(onlyHotel) <= 0) return 1;
@@ -1051,32 +1308,44 @@ int Player::sellForMoney() { // return 0:money not enough -> bankrupt  1:money n
                     cout << this->name << " 販售 1 間旅館，得到 " << priceList[fNum-1].housePrice * 5 << "$\n";
                     priceList[fNum-1].hotel = 0;
                     this->gameboard->getField(priceList[fNum-1].fieldNum)->demolish(5);
-                } else {
-                    this->earn(priceList[fNum-1].housePrice * 5 + priceList[fNum-1].fieldPrice);
-                    cout << this->name << " 販售 " << priceList[fNum-1].fieldName << " ，得到 " << priceList[fNum-1].housePrice * 5 + priceList[fNum-1].fieldPrice << "$\n";
-                    this->gameboard->getField(priceList[fNum-1].fieldNum)->sell();
-                    for (int i = fNum; i < (int)(priceList.size()); i++) {
-                        priceList[i-1] = priceList[i]; 
+                } else {*/
+                    this->earn(priceList[fNum].housePrice * 5 + priceList[fNum].fieldPrice);
+                    string s = "", msg = "";
+                    msg.append(this->name).append(" sold ").append(priceList[fNum].fieldName).append(" for $").append(to_string(priceList[fNum].housePrice * 5 + priceList[fNum].fieldPrice));
+                    commandLog(s, msg);
+                    cout << this->name << " 販售 " << priceList[fNum].fieldName << " ，得到 " << priceList[fNum].housePrice * 5 + priceList[fNum].fieldPrice << "$\n";
+                    this->gameboard->getField(priceList[fNum].fieldNum)->sell();
+                    for (int i = fNum; i < (int)(priceList.size()-1); i++) {
+                        priceList[i] = priceList[i+1]; 
                     }
                     priceList.pop_back();
-                }
+                    sendToAllLivePlayer(this->gameboard, s);
+                //}
             } else {
-                this->earn(priceList[fNum-1].fieldPrice);
-                cout << this->name << " 販售 " << priceList[fNum-1].fieldName << " ，得到 " << priceList[fNum-1].fieldPrice << "$\n";
-                this->gameboard->getField(priceList[fNum-1].fieldNum)->sell();
-                for (int i = fNum; i < (int)(priceList.size()); i++) {
-                    priceList[i-1] = priceList[i]; 
+                this->earn(priceList[fNum].fieldPrice);
+                string s = "", msg = "";
+                msg.append(this->name).append(" sold ").append(priceList[fNum].fieldName).append(" for $").append(to_string(priceList[fNum].fieldPrice));
+                commandLog(s, msg);
+                cout << this->name << " 販售 " << priceList[fNum].fieldName << " ，得到 " << priceList[fNum].fieldPrice << "$\n";
+                this->gameboard->getField(priceList[fNum].fieldNum)->sell();
+                for (int i = fNum; i < (int)(priceList.size()-1); i++) {
+                    priceList[i] = priceList[i+1]; 
                 }
                 priceList.pop_back();
+                sendToAllLivePlayer(this->gameboard, s);
             }
         } else {
             this->earn(priceList[fNum-1].fieldPrice);
-            cout << this->name << " 販售 " << priceList[fNum-1].fieldName << " ，得到 " << priceList[fNum-1].fieldPrice << "$\n";
+            string s = "", msg = "";
+            msg.append(this->name).append(" sold ").append(priceList[fNum].fieldName).append(" for $").append(to_string(priceList[fNum].fieldPrice));
+            commandLog(s, msg);
+            cout << this->name << " 販售 " << priceList[fNum-1].fieldName << " ，得到 " << priceList[fNum].fieldPrice << "$\n";
             this->gameboard->getField(priceList[fNum-1].fieldNum)->sell();
             for (int i = fNum; i < (int)(priceList.size()); i++) {
                 priceList[i-1] = priceList[i]; 
             }
             priceList.pop_back();
+            sendToAllLivePlayer(this->gameboard, s);
         }
     }
 
@@ -1095,12 +1364,23 @@ void Player::demolishRandHouse() {
         int r = rand() % (int)(f.size());
         if (f[r]->getHouse() == 5) {
             f[r]->demolish(5);
+            string s = "", msg = "";
+            msg.append("hotel at ").append(f[r]->getName()).append("was demolished.");
+            commandLog(s, msg);
+            sendToAllLivePlayer(this->gameboard, s);
             cout << f[r]->getName() << " 的旅館被拆除了\n";
         } else {
             f[r]->demolish(1);
+            string s = "", msg = "";
+            msg.append("house at ").append(f[r]->getName()).append("was demolished.");
+            commandLog(s, msg);
+            sendToAllLivePlayer(this->gameboard, s);
             cout << f[r]->getName() << " 的房屋被拆除了\n";
         }
     } else {
+        string s = "", msg = "There is no house being demolished.";
+        commandLog(s, msg);
+        sendToAllLivePlayer(this->gameboard, s);
         cout << "沒有任何房屋被拆除\n";
     }
 }
@@ -1186,6 +1466,10 @@ void Card::execute(Player *player) {
                 // "在農地上種光電，每持有一塊地獲得15$";
                 int num = player->getFieldNum();
                 num *= 15;
+                string s = "", msg = "";
+                msg.append("total: $").append(to_string(num));
+                commandLog(s, msg);
+                sendToUser(player->getSockfd(), s);
                 cout << "總共獲得 " << num << "$\n";
                 player->earn(num);
                 break;
@@ -1208,10 +1492,15 @@ void Card::execute(Player *player) {
                 // "發生規模9.0強震，地圖上隨機一塊地上房屋全毀 (所有土地都有可能)";
                 player->earthquake();
                 break;
-            case 12:
+            case 12: {
                 // "投胎投得好，父親身為建商，與執政黨合作多年，出事了有老爸罩 (免刑1次，可保留)";
+                string s = "", msg = "";
+                msg.append(player->getName()).append("was released from jail after one day due to the \"special\" relationship.");
+                commandLog(s, msg);
+                sendToAllLivePlayer(player->getBoard(), s);
                 cout << player->getName() << " 靠關係在外役監待了1天就出來了\n";
                 break;
+            }
             case 13:
                 // "慘遭投資詐騙，血本無歸，損失200$";
                 player->pay(200);
@@ -1381,8 +1670,8 @@ void Card::execute(Player *player) {
             
 }
 
-int Player::getUserInput(int &input) {
-    int n = scanf("%d", &input);
+int Player::getUserInput(char *buf) {
+    int n = Readline(this->sockfd, buf, MAXLINE); //scanf("%d", &input);
     if (n <= 0) {
         if (errno == EINTR) {
             this->gameboard->playerTimeout(this->id);
@@ -1394,8 +1683,8 @@ int Player::getUserInput(int &input) {
     }
     return n;
 }
-int Field::getUserInput(int &input) {
-    int n = scanf("%d", &input);
+int Field::getUserInput(char *buf) {
+    int n = Readline(this->gameboard->getTurnPlayer()->getSockfd(), buf, MAXLINE);
     if (n <= 0) {
         if (errno == EINTR) {
             this->gameboard->turnPlayerTimeout();
@@ -1407,9 +1696,8 @@ int Field::getUserInput(int &input) {
     }
     return n;
 }
-int Gameboard::getUserInput(int &input) {
-    cout << "\t\t>> ";
-    int n = scanf("%d", &input);
+int Gameboard::getUserInput(char *buf) {
+    int n = Readline(this->getTurnPlayer()->getSockfd(), buf, MAXLINE);
     if (n <= 0) {
         if (errno == EINTR) {
             this->turnPlayerTimeout();
@@ -1422,26 +1710,55 @@ int Gameboard::getUserInput(int &input) {
     return n;
 }
 
+void sendToAllLivePlayer(Gameboard *board, char *str) {
+    vector<Player*> *v = board->getSurvivors();
+    for (int i = 0; i < (int)(v->size()); i++) {
+        sendToUser((*v)[i]->getSockfd(), str);
+    }
+}
+
+void sendToAllLivePlayer(Gameboard *board, string &str) {
+    vector<Player*> *v = board->getSurvivors();
+    for (int i = 0; i < (int)(v->size()); i++) {
+        sendToUser((*v)[i]->getSockfd(), str);
+    }
+}
+
+
+void commandSetPlayers(string &s, Gameboard *board) {
+    s = "setplayers ";
+    s.append(to_string(board->getPlayerNumber()));
+    for (int i = 0; i < board->getPlayerNumber(); i++) {
+        s.append(" ").append(board->getPlayer(i)->getName());
+    }
+    s.append("/\n");
+}
+
+
+
 void game(WaitingRoom *room) {
     Gameboard board = Gameboard(room);
+    string s = "";
+    commandSetPlayers(s, &board);
+    sendToAllLivePlayer(&board, s);
 
     int command;
     int turnNum = 1;
     Signal(SIGALRM, sig_alrm);
     while (true) {
-        alarm(10);
+        alarm(600);
         //board.setBankrupt(command);
         cout << "\n\n\n\n- - - - - - - - - - - - - Turn " << turnNum++ << " - - - - - - - - - - - - -\n\n";
         board.nextTurn();
-        if (board.getUserInput(command) <= 0) goto TurnEnd;
+        if (board.isTurnPlayerBankrupt()) goto TurnEnd;
         if (board.getTurnPlayer()->isInJail()) {
             board.getField(10)->execute(board.getTurnPlayer());
-            if (board.getUserInput(command) <= 0) goto TurnEnd;
+            if (board.isTurnPlayerBankrupt()) goto TurnEnd;
             if (board.getTurnPlayer()->isInJail()) {
-                if (board.getUserInput(command) <= 0) goto TurnEnd;
+                if (board.isTurnPlayerBankrupt()) goto TurnEnd;
                 continue;
             } else {
-                if (board.getUserInput(command) <= 0) goto TurnEnd;
+                if (board.isTurnPlayerBankrupt()) goto TurnEnd;
                 board.getTurnPlayer()->move(board.getTurnPlayer()->getLastMove());
             }
         } else {
@@ -1453,9 +1770,9 @@ void game(WaitingRoom *room) {
         }
         board.printTrunPlayerMove();
         board.checkTurnPlayerPassStart();
-        if (board.getUserInput(command) <= 0) goto TurnEnd;
+        if (board.isTurnPlayerBankrupt()) goto TurnEnd;
         board.turnPlayerTriggerField();
-        if (board.getUserInput(command) <= 0) goto TurnEnd;
+        if (board.isTurnPlayerBankrupt()) goto TurnEnd;
 
 TurnEnd:
         alarm(0);
@@ -1473,15 +1790,87 @@ TurnEnd:
     
 }
 
-
+/*
 int main () {
-    /*
+    
         unsigned int seed;
         seed = (unsigned int)time(NULL);
         srand(seed);
-    */
+    
     srand(42); // for test
     WaitingRoom room = {3, {"Explosion0w0", "kwkwkwkak", "LIAN26880912"}, {3000, 3001, 3002}}; // for test
     game(&room);
-    
 }
+*/
+
+int main(int argc, char **argv)
+{
+	int					listenfd, connfd1, connfd2;
+	pid_t				childpid;
+	socklen_t			clilen;
+	struct sockaddr_in	cliaddr1, cliaddr2, servaddr;
+	void				sig_chld(int);
+
+	listenfd = Socket(AF_INET, SOCK_STREAM, 0);
+
+	bzero(&servaddr, sizeof(servaddr));
+	servaddr.sin_family      = AF_INET;
+	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	servaddr.sin_port        = htons(SERV_PORT);
+
+	Bind(listenfd, (SA *) &servaddr, sizeof(servaddr));
+
+	Listen(listenfd, LISTENQ);
+
+	Signal(SIGCHLD, sig_chld);	/* must call waitpid() */
+
+    int pNum = 0;
+    WaitingRoom room = WaitingRoom();
+		clilen = sizeof(cliaddr1);
+        if (!pNum) {
+            if ( (connfd1 = accept(listenfd, (SA *) &cliaddr1, &clilen)) < 0) {
+                if (errno == EINTR);
+                    //continue;		/* back to for() */
+                else
+                    err_sys("accept error");
+            } else {
+                pNum += 1;
+                char buf[MAXLINE];
+                int n = Read(connfd1, buf, MAXLINE-1);
+                buf[n-1] = '\0';
+                room.addPlayer(buf, connfd1);
+                Writen(connfd1, const_cast<char*>("isfirst/\n"), 9);
+                cout << "First\n";
+            }
+        }
+        if (pNum == 1) {
+            if ( (connfd2 = accept(listenfd, (SA *) &cliaddr2, &clilen)) < 0) {
+                if (errno == EINTR);
+                    //continue;		/* back to for() */
+                else
+                    err_sys("accept error");
+            } else {
+                pNum += 1;
+                char buf[MAXLINE];
+                int n = Read(connfd2, buf, MAXLINE-1);
+                buf[n-1] = '\0';
+                room.addPlayer(buf, connfd2);
+            }
+        }
+
+			/* child process */
+			Close(listenfd);	/* close listening socket */
+            srand(42); // for test
+            WaitingRoom r = room;
+            cout << r.playerNames[0] << " " << r.sockfds[0] << ", " << r.playerNames[1] << " " << r.sockfds[1] << "\n";
+			//str_echo(connfd);	/* process the request */
+            game(&r);
+		    Close(connfd1);			/* parent closes connected socket */
+		    Close(connfd2);			/* parent closes connected socket */
+			exit(0);
+		
+        room = WaitingRoom();
+        cout << room.playerNum << "\n";
+	
+}
+
