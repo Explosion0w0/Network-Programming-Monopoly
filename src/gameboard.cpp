@@ -1812,7 +1812,7 @@ void game(WaitingRoom *room) {
     string s = "";
     commandSetPlayers(s, &board);
     sendToAllLivePlayer(&board, s);
-    int maxfdp1;
+    //int maxfdp1;
     fd_set rset;
     FD_ZERO(&rset);
     
@@ -1859,6 +1859,8 @@ void game(WaitingRoom *room) {
         board.turnPlayerTriggerField();
         if (board.isTurnPlayerBankrupt()) goto TurnEnd;
 
+        //char buf[MAXLINE];
+        //board.waitForTPInput(buf);
 TurnEnd:
         alarm(0);
         board.checkEnd();
@@ -1933,7 +1935,7 @@ int main(int argc, char **argv)
             room.addPlayer(buf, connfd);
             
             Writen(connfd, const_cast<char*>("isfirst/\n"), 9);
-            cout << "First\n";
+            cout << buf << " is First\n";
         }
 
         for (;;){
@@ -1962,7 +1964,7 @@ int main(int argc, char **argv)
 
                 /*
                 //阻止更多人加入
-                else if(pNum >= 2){
+                else if(pNum >= 8){
                     char sendline[MAXLINE];
                     snprintf(sendline, MAXLINE, "You are the #%d player. Wait for game starting.\n", pNum);
                     Write(connfd, sendline, MAXLINE);
@@ -1985,8 +1987,16 @@ int main(int argc, char **argv)
             if(FD_ISSET(room.sockfds[0], &rset)) {
                 char recvline[MAXLINE];
                 int n = Readline(room.sockfds[0], recvline, MAXLINE-1);
+                if (n == 0){
+                    for (int i = 0; i < room.playerNum; i++){
+                        Close(room.sockfds[i]);
+                    }
+                    cout << "Disconnect\n";
+                    return 0;
+                }
                 recvline[n-1] = '\0';
                 if (strcmp(recvline, "START") == 0){
+
                     if ((childpid = Fork()) == 0) {    
                         Close(listenfd);	
                         fputs("game start\n", stdout);
@@ -2000,6 +2010,7 @@ int main(int argc, char **argv)
                         exit(0);
                     }
                     wait(0);
+                    Close(listenfd);
                     return 0;
                 }
             }
