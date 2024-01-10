@@ -9,6 +9,8 @@
 #include <wx/wxprec.h>
 #include <wx/thread.h>
 #include <wx/event.h>
+#include <wx/anybutton.h>
+#include <wx/html/htmlwin.h>
 #ifndef WX_PRECOMP
     #include <wx/wx.h>
 #endif
@@ -109,7 +111,9 @@ enum
     ID_BUTTONBUY = 3,
     ID_BUTTONDONTBUY = 4,
     ID_BUTTONSELL = 5,
-    ID_BUTTONSTART = 6
+    ID_BUTTONSTART = 6,
+    ID_BUTTONSHOWP = 7,
+    ID_PROPSHOW = 8
 };
 
 wxDECLARE_EVENT(wxEVT_THREAD_COMPLETE, wxCommandEvent);
@@ -188,18 +192,21 @@ protected:
     wxButton *buttonDontBuy;
     wxButton *buttonSell;
     wxButton *buttonStart;
+    wxBitmapButton *buttonShowP[28];
     wxStaticBitmap *imageCtrl, *imgPlayers[8], *imgProperty[40], *imgWin;
     wxTimer *timer;
     wxTextCtrl *textDisplay, *balanceDisplay;
     wxControl *ownLabel[40];
     wxComboBox *ownedProperties;
     wxStaticText *playerNames[8];
+    wxHtmlWindow *propShow;
 
     void OnButtonDiceClick(wxCommandEvent& event);
     void OnButtonBuyClick(wxCommandEvent& event);
     void OnButtonDontBuyClick(wxCommandEvent& event);
     void OnButtonSellClick(wxCommandEvent& event);
     void OnButtonStartClick(wxCommandEvent& event);
+    void OnButtonShowPClick(wxCommandEvent& event);
 
     int sockfd, playerLocations[8], propertyState[40], balance,
         pendingRoll1, pendingRoll2;
@@ -213,6 +220,7 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_BUTTON(ID_BUTTONDONTBUY, MyFrame::OnButtonDontBuyClick)
     EVT_BUTTON(ID_BUTTONSELL, MyFrame::OnButtonSellClick)
     EVT_BUTTON(ID_BUTTONSTART, MyFrame::OnButtonStartClick)
+    EVT_BUTTON(ID_BUTTONSHOWP, MyFrame::OnButtonShowPClick)
     EVT_CLOSE(MyFrame::OnClose)
     EVT_COMMAND(wxID_ANY, wxEVT_THREAD_LOG, MyFrame::logAction)
     EVT_COMMAND(wxID_ANY, wxEVT_THREAD_COMPLETE, MyFrame::OnThreadCompletion)
@@ -832,6 +840,7 @@ MyFrame::MyFrame(const wxString& title, const wxPoint& pos, const wxSize& size, 
     buttonBuy = new wxButton(panel, ID_BUTTONBUY, "Buy", wxPoint(950, 800), wxSize(150, 50));
     buttonDontBuy = new wxButton(panel, ID_BUTTONDONTBUY, "Don't Buy", wxPoint(1150, 800), wxSize(150, 50));
     buttonSell = new wxButton(panel, ID_BUTTONSELL, "Sell", wxPoint(950, 800), wxSize(150, 50));
+    propShow = new wxHtmlWindow(panel, ID_PROPSHOW, wxPoint(450, 250), wxSize(240, 400));
     buttonStart = new wxButton(panel, ID_BUTTONSTART, "START GAME", wxPoint(350, 350), wxSize(200, 200));
 
     buttonDice->Show(false);
@@ -839,6 +848,41 @@ MyFrame::MyFrame(const wxString& title, const wxPoint& pos, const wxSize& size, 
     buttonDontBuy->Show(false);
     buttonSell->Show(false);
     buttonStart->Show(false);
+
+
+    buttonShowP[0] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(708, 778), wxSize(75, 122));
+    buttonShowP[1] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(708-148, 778), wxSize(75, 122));
+    buttonShowP[2] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(708-296, 778), wxSize(75, 122));
+    buttonShowP[3] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(708-370, 778), wxSize(75, 122));
+    buttonShowP[4] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(708-517, 778), wxSize(75, 122));
+    buttonShowP[5] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(708-591, 778), wxSize(75, 122));
+    buttonShowP[6] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(-1, 704), wxSize(122, 75));
+    buttonShowP[7] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(-1, 704-74), wxSize(122, 75));
+    buttonShowP[8] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(-1, 704-148), wxSize(122, 75));
+    buttonShowP[9] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(-1, 704-222), wxSize(122, 75));
+    buttonShowP[10] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(-1, 704-296), wxSize(122, 75));
+    buttonShowP[11] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(-1, 704-370), wxSize(122, 75));
+    buttonShowP[12] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(-1, 704-518), wxSize(122, 75));
+    buttonShowP[13] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(-1, 704-591), wxSize(122, 75));
+    buttonShowP[14] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(708-591, -1), wxSize(75, 122));
+    buttonShowP[15] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(708-444, -1), wxSize(75, 122));
+    buttonShowP[16] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(708-370, -1), wxSize(75, 122));
+    buttonShowP[17] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(708-296, -1), wxSize(75, 122));
+    buttonShowP[18] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(708-222, -1), wxSize(75, 122));
+    buttonShowP[19] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(708-148, -1), wxSize(75, 122));
+    buttonShowP[20] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(708-74, -1), wxSize(75, 122));
+    buttonShowP[21] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(708, -1), wxSize(75, 122));
+
+    buttonShowP[22] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(780, 704-591), wxSize(122, 75));
+    buttonShowP[23] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(780, 704-518), wxSize(122, 75));
+    buttonShowP[24] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(780, 704-370), wxSize(122, 75));
+    buttonShowP[25] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(780, 704-296), wxSize(122, 75));
+    buttonShowP[26] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(780, 704-148), wxSize(122, 75));
+    buttonShowP[27] = new wxBitmapButton(panel, ID_BUTTONSHOWP, wxBitmap(0, 0, wxBITMAP_SCREEN_DEPTH), wxPoint(780, 704), wxSize(122, 75));
+    for (int i = 0; i < 28; i++) {
+        buttonShowP[i]->SetBackgroundColour(wxColour(255, 255, 255, 0));
+        buttonShowP[i]->Show(true);
+    }
 
     wxBitmap bmpwin("../assets/win.png", wxBITMAP_TYPE_PNG);
     imgWin = new wxStaticBitmap(panel, wxID_ANY, bmpwin, wxPoint(155, 165));
@@ -915,6 +959,14 @@ void MyFrame::OnButtonStartClick(wxCommandEvent& event)
 {
     buttonStart->Show(false);
     Writen(sockfd, const_cast<char*>("START\n"), 7);
+}
+
+void MyFrame::OnButtonShowPClick(wxCommandEvent& event) 
+{
+    char str[MAXLINE];
+    sprintf(str, "<html><body><table><thead><tr><th colspan=\"2\">Property%d</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>" \
+    , 0);
+    propShow->SetPage(str);
 }
 
 
