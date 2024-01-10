@@ -313,6 +313,7 @@ struct Dice {
 };
 
 Dice roll() {
+    srand(time(0));
     int d1, d2;
     d1 = rand();
     d2 = rand();
@@ -796,7 +797,8 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
                     int fd = this->survivors->at(i)->getSockfd();
                     if (FD_ISSET(fd, &rset)) {
                         if (this->survivors->at(i) == this->getTurnPlayer()) {
-                            int n = Readline(fd, buf, MAXLINE);
+                            int n = Read(fd, buf, MAXLINE);
+                            cout << buf << " " << n << "\n";
                             buf[n] = '\0';
                             if (n <= 0) {
                                 this->playerLeave(this->survivors->at(i)->getId());
@@ -1628,7 +1630,7 @@ void Field::checkBuy(Player *player) {
                 char buf[MAXLINE];
                 //this->getUserInput(buf);
                 this->gameboard->waitForTPInput(buf);
-                cout << "BUF" << buf << strlen(buf) << "\n";
+                cout << "BUF " << buf << strlen(buf) << "\n";
                 if ((strcmp(buf, "NO\n") == 0) || (strcmp(buf, "NO") == 0)) {
                     return;
                 } else if ((strcmp(buf, "YES\n") == 0) || (strcmp(buf, "YES") == 0)) {
@@ -1998,8 +2000,7 @@ int main(int argc, char **argv)
                         exit(0);
                     }
                     wait(0);
-                    room = WaitingRoom();
-                    pNum = 0;
+                    return 0;
                 }
             }
         }    
