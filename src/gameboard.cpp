@@ -1796,7 +1796,9 @@ int main () {
         unsigned int seed;
         seed = (unsigned int)time(NULL);
         srand(seed);
+    */
     
+   /*
     srand(42); // for test
     WaitingRoom room = {3, {"Explosion0w0", "kwkwkwkak", "LIAN26880912"}, {3000, 3001, 3002}}; // for test
     game(&room);
@@ -1805,11 +1807,13 @@ int main () {
 
 int main(int argc, char **argv)
 {
-	int					listenfd, connfd1, connfd2;
+    
+	int					listenfd, connfd; //connfd1, connfd2;
 	pid_t				childpid;
+	struct sockaddr_in	servaddr, cliaddr; //cliaddr1, cliaddr2, servaddr;
 	socklen_t			clilen;
-	struct sockaddr_in	cliaddr1, cliaddr2, servaddr;
 	void				sig_chld(int);
+    fd_set				rset;
 
 	listenfd = Socket(AF_INET, SOCK_STREAM, 0);
 
@@ -1822,55 +1826,90 @@ int main(int argc, char **argv)
 
 	Listen(listenfd, LISTENQ);
 
-	Signal(SIGCHLD, sig_chld);	/* must call waitpid() */
+	Signal(SIGCHLD, sig_chld);	
 
     int pNum = 0;
     WaitingRoom room = WaitingRoom();
-		clilen = sizeof(cliaddr1);
-        if (!pNum) {
-            if ( (connfd1 = accept(listenfd, (SA *) &cliaddr1, &clilen)) < 0) {
+
+    FD_ZERO(&rset);
+    FD_SET(listenfd, &rset);
+
+    for (;;){
+
+        if (FD_ISSET(listenfd, &rset)){
+            clilen = sizeof(cliaddr);
+            bzero(&connfd, sizeof(connfd));
+            if ( (connfd = accept(listenfd, (SA *) &cliaddr, &clilen)) < 0) {
                 if (errno == EINTR);
-                    //continue;		/* back to for() */
+                    //continue;		
                 else
                     err_sys("accept error");
-            } else {
+            } 
+
+            /*
+            //阻止更多人加入
+            else if(pNum >= 2){
+                char sendline[MAXLINE];
+                snprintf(sendline, MAXLINE, "You are the #%d player. Wait for game starting.\n", pNum);
+                Write(connfd, sendline, MAXLINE);
+                Close(connfd);
+            }
+            */
+            else {
                 pNum += 1;
                 char buf[MAXLINE];
-                int n = Read(connfd1, buf, MAXLINE-1);
+                int n = Read(connfd, buf, MAXLINE-1);
                 buf[n-1] = '\0';
-                room.addPlayer(buf, connfd1);
-                Writen(connfd1, const_cast<char*>("isfirst/\n"), 9);
-                cout << "First\n";
+                room.addPlayer(buf, connfd);
+                FD_SET(connfd, &rset);
+                char sendline[MAXLINE];
+                snprintf(sendline, MAXLINE, "You are the #%d player. Wait for game starting.\n", pNum);
+
+                Writen(connfd, sendline, MAXLINE);
+                cout << buf << " is #" << pNum << "\n";
             }
-        }
-        if (pNum == 1) {
-            if ( (connfd2 = accept(listenfd, (SA *) &cliaddr2, &clilen)) < 0) {
-                if (errno == EINTR);
-                    //continue;		/* back to for() */
-                else
-                    err_sys("accept error");
-            } else {
-                pNum += 1;
-                char buf[MAXLINE];
-                int n = Read(connfd2, buf, MAXLINE-1);
-                buf[n-1] = '\0';
-                room.addPlayer(buf, connfd2);
-            }
+
         }
 
-			/* child process */
-			Close(listenfd);	/* close listening socket */
-            srand(42); // for test
-            WaitingRoom r = room;
-            cout << r.playerNames[0] << " " << r.sockfds[0] << ", " << r.playerNames[1] << " " << r.sockfds[1] << "\n";
-			//str_echo(connfd);	/* process the request */
-            game(&r);
-		    Close(connfd1);			/* parent closes connected socket */
-		    Close(connfd2);			/* parent closes connected socket */
-			exit(0);
+        /*
+        //按下開始的版本
+        int start = 0;
+        if(FD_ISSET(room.sockfds[0], &rset)) {
+            char recvline[MAXLINE];
+            int n = read(connfd, recvline, MAXLINE-1);
+            recvline[n-1] = '\0';
+            if (strcmp(recvline, "START") == 0){
+                start = 1;
+            }
+        }
+        */
+
+        if (pNum > 2 /*start*/){
+            if ((childpid = Fork()) == 0) {    
+                Close(listenfd);	
+                srand(42); // for test
+                WaitingRoom r = room;
+                int n = r.playerNum;
+                for (int i = 0; i < n; i++){
+                    //cout << r.playerNames[0] << " " << r.sockfds[0];
+                    if (i == n - 1) cout << "\n";
+                    else cout << ", ";
+                }
+                game(&r);
+                for (int i = 0; i < n; i++){
+                    Close(r.sockfds[i]);
+                }
+                exit(0);
+            }
+            wait(0);
+            room = WaitingRoom();
+        }
+    
+    }    
 		
-        room = WaitingRoom();
-        cout << room.playerNum << "\n";
-	
+    //room = WaitingRoom();
+    //cout << room.playerNum << "\n";
+
+
 }
 
