@@ -96,7 +96,7 @@ map<int, wxPoint> propertyCoord =
 map<string, int> propertyIndices =
 {
     {"Keelung City", 1}, {"Miaoli Count(r)y", 3}, {"Taitung Train Station", 5}, {"Penghu County", 6},
-    {"Kinmen County", 8}, {"Lianjian County", 9}, {"Taitung County", 11}, {"Taiwan Power Company", 12},
+    {"Kinmen County", 8}, {"Lianjiang County", 9}, {"Taitung County", 11}, {"Taiwan Power Company", 12},
     {"Hualien County", 13}, {"Yilan County", 14}, {"Tainan Train Station", 15}, {"Pingtung County", 16},
     {"Kaohsiung City", 18}, {"Tainan City", 19}, {"Chiayi City", 21}, {"Chiayi County", 23}, {"Yunlin County", 24},
     {"Taichung Train Station", 25}, {"Nantou County", 26}, {"Changhua County", 27}, {"Taiwan Water Corporation", 28},
@@ -209,6 +209,8 @@ public:
     void ownProperty(wxCommandEvent& event);
     void unownProperty(wxCommandEvent& event);
     void win(wxCommandEvent& event);
+
+    string generateHTML(string name, int price, int empty, int h1, int h2, int h3, int h4, int hotel, int upgrade);
 
     MyThread *m_pThread;
     wxCriticalSection m_pThreadCS;
@@ -1048,138 +1050,154 @@ void MyFrame::OnButtonStartClick(wxCommandEvent& event)
     Writen(sockfd, const_cast<char*>("START\n"), 7);
 }
 
+string MyFrame::generateHTML(string name, int price, int empty, int h1, int h2, int h3, int h4, int hotel, int upgrade)
+{
+    return "<html><body><table><thead><tr><th colspan=\"2\">" + name + "</th></tr></thead><tbody><tr><td>Price:</td><td>$" + to_string(price) + 
+    "</td></tr><tr><td>=======</td></tr><tr><td>Rent:</td></tr><tr><td>Empty:</td><td>$" + to_string(empty) + "</td></tr><tr><td>1 House:</td><td>$" + to_string(h1) + 
+    "</td></tr><tr><td>2 Houses:</td><td>$" + to_string(h2) + "</td></tr><tr><td>3 Houses:</td><td>$" + to_string(h3) + 
+    "</td></tr><tr><td>4 Houses:</td><td>$" + to_string(h4) + "</td></tr><tr><td>Hotel:</td><td>$" + to_string(hotel) + 
+    "</td></tr><tr><td>=======</td></tr><tr><td>Upgrade:</td><td>$" + to_string(upgrade) + "</td></tr></tbody></table></body></html>";
+}
+
 void MyFrame::OnButtonShowP1Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Keelung City", 60, 2, 10, 30, 90, 160, 250, 50));
 }
 
 void MyFrame::OnButtonShowP2Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Miaoli Count(r)y", 60, 4, 20, 60, 180, 320, 450, 50));
 }
 
 void MyFrame::OnButtonShowP3Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Taitung Train Station", 200,25,50,100,200,0,0,0));
 }
 
 void MyFrame::OnButtonShowP4Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Penghu County", 100,6,30,90,270,400,550,50));
 }
 
 void MyFrame::OnButtonShowP5Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Kinmen County", 100,6,30,90,270,400,550,50));
 }
 
 void MyFrame::OnButtonShowP6Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Lianjiang County", 120,8,40,100,300,450,600,50));
 }
 
 void MyFrame::OnButtonShowP7Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Taitung County", 140,10,50,150,450,625,750,100));
 }
 
 void MyFrame::OnButtonShowP8Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Taiwan Power Company", 150,4,10,0,0,0,0,0));
 }
 
 void MyFrame::OnButtonShowP9Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property test</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Hualien County", 140,10,50,150,450,625,750,100));
 }
 
 void MyFrame::OnButtonShowP10Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Yilan County", 160,12,60,180,500,700,900,100));
 }
 
 void MyFrame::OnButtonShowP11Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Tainan Train Station", 200,25,50,100,200,0,0,0));
 }
 
 void MyFrame::OnButtonShowP12Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Pingtung County", 180,14,70,200,550,750,950,100));
 }
 
 void MyFrame::OnButtonShowP13Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Kaohsiung City", 180,14,70,200,550,750,950,100));
 }
 
 void MyFrame::OnButtonShowP14Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Tainan City", 200,16,80,220,600,800,1000,100));
 }
 
 void MyFrame::OnButtonShowP15Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Chiayi City", 220,18,90,250,700,875,1050,150));
 }
 
 void MyFrame::OnButtonShowP16Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Chiayi County", 220,18,90,250,700,875,1050,150));
 }
 
 void MyFrame::OnButtonShowP17Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Yunlin County", 240,20,100,300,750,925,1100,150));
 }
 
 void MyFrame::OnButtonShowP18Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Taichung Train Station", 200,25,50,100,200,0,0,0));
 }
 
 void MyFrame::OnButtonShowP19Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Nantou County", 260,22,110,330,800,975,1150,150));
 }
 
 void MyFrame::OnButtonShowP20Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Changhua County", 260,22,110,330,800,975,1150,150));
 }
 
 void MyFrame::OnButtonShowP21Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Taiwan Water Corporation", 150,4,10,0,0,0,0,0));
 }
 
 void MyFrame::OnButtonShowP22Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Taichung City", 280,24,120,360,850,1025,1200,150));
 }
+
 void MyFrame::OnButtonShowP23Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Hsinchu County", 300,26,130,390,900,1100,1275,200));
 }
+
 void MyFrame::OnButtonShowP24Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Hsinchu City", 300,26,130,390,900,1100,1275,200));
 }
+
 void MyFrame::OnButtonShowP25Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Taoyuan City", 320,28,150,450,1000,1200,1400,200));
 }
+
 void MyFrame::OnButtonShowP26Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Taipei Train Station", 200,25,50,100,200,0,0,0));
 }
+
 void MyFrame::OnButtonShowP27Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("New Taipei City", 350,35,175,500,1100,1300,1500,200));
 }
 
 void MyFrame::OnButtonShowP28Click(wxCommandEvent& event) 
 {
-    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+    propShow->SetPage(generateHTML("Taipei City", 400,50,200,600,1400,1700,2000,200));
 }
+
 wxIMPLEMENT_APP(MyApp);
+
