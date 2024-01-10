@@ -9,6 +9,8 @@
 #include <wx/wxprec.h>
 #include <wx/thread.h>
 #include <wx/event.h>
+#include <wx/anybutton.h>
+#include <wx/html/htmlwin.h>
 #ifndef WX_PRECOMP
     #include <wx/wx.h>
 #endif
@@ -110,7 +112,36 @@ enum
     ID_BUTTONBUY = 3,
     ID_BUTTONDONTBUY = 4,
     ID_BUTTONSELL = 5,
-    ID_BUTTONSTART = 6
+    ID_BUTTONSTART = 6,
+    ID_BUTTONSHOWP1 = 7,
+    ID_BUTTONSHOWP2 = 9,
+    ID_BUTTONSHOWP3 = 10,
+    ID_BUTTONSHOWP4 = 11,
+    ID_BUTTONSHOWP5 = 12,
+    ID_BUTTONSHOWP6 = 13,
+    ID_BUTTONSHOWP7 = 14,
+    ID_BUTTONSHOWP8 = 15,
+    ID_BUTTONSHOWP9 = 16,
+    ID_BUTTONSHOWP10 = 17,
+    ID_BUTTONSHOWP11 = 18,
+    ID_BUTTONSHOWP12 = 19,
+    ID_BUTTONSHOWP13 = 20,
+    ID_BUTTONSHOWP14 = 21,
+    ID_BUTTONSHOWP15 = 22,
+    ID_BUTTONSHOWP16 = 23,
+    ID_BUTTONSHOWP17 = 24,
+    ID_BUTTONSHOWP18 = 25,
+    ID_BUTTONSHOWP19 = 26,
+    ID_BUTTONSHOWP20 = 27,
+    ID_BUTTONSHOWP21 = 28,
+    ID_BUTTONSHOWP22 = 29,
+    ID_BUTTONSHOWP23 = 30,
+    ID_BUTTONSHOWP24 = 31,
+    ID_BUTTONSHOWP25 = 32,
+    ID_BUTTONSHOWP26 = 33,
+    ID_BUTTONSHOWP27 = 34,
+    ID_BUTTONSHOWP28 = 35,
+    ID_PROPSHOW = 36
 };
 
 wxDECLARE_EVENT(wxEVT_THREAD_COMPLETE, wxCommandEvent);
@@ -189,18 +220,48 @@ protected:
     wxButton *buttonDontBuy;
     wxButton *buttonSell;
     wxButton *buttonStart;
+    wxBitmapButton *buttonShowP[28];
     wxStaticBitmap *imageCtrl, *imgPlayers[8], *imgProperty[40], *imgWin, *imgDice[2];
     wxTimer *timer;
     wxTextCtrl *textDisplay, *balanceDisplay;
     wxControl *ownLabel[40];
     wxComboBox *ownedProperties;
     wxStaticText *playerNames[8];
+    wxHtmlWindow *propShow;
 
     void OnButtonDiceClick(wxCommandEvent& event);
     void OnButtonBuyClick(wxCommandEvent& event);
     void OnButtonDontBuyClick(wxCommandEvent& event);
     void OnButtonSellClick(wxCommandEvent& event);
     void OnButtonStartClick(wxCommandEvent& event);
+    void OnButtonShowP1Click(wxCommandEvent& event);
+    void OnButtonShowP2Click(wxCommandEvent& event);
+    void OnButtonShowP3Click(wxCommandEvent& event);
+    void OnButtonShowP4Click(wxCommandEvent& event);
+    void OnButtonShowP5Click(wxCommandEvent& event);
+    void OnButtonShowP6Click(wxCommandEvent& event);
+    void OnButtonShowP7Click(wxCommandEvent& event);
+    void OnButtonShowP8Click(wxCommandEvent& event);
+    void OnButtonShowP9Click(wxCommandEvent& event);
+    void OnButtonShowP10Click(wxCommandEvent& event);
+    void OnButtonShowP11Click(wxCommandEvent& event);
+    void OnButtonShowP12Click(wxCommandEvent& event);
+    void OnButtonShowP13Click(wxCommandEvent& event);
+    void OnButtonShowP14Click(wxCommandEvent& event);
+    void OnButtonShowP15Click(wxCommandEvent& event);
+    void OnButtonShowP16Click(wxCommandEvent& event);
+    void OnButtonShowP17Click(wxCommandEvent& event);
+    void OnButtonShowP18Click(wxCommandEvent& event);
+    void OnButtonShowP19Click(wxCommandEvent& event);
+    void OnButtonShowP20Click(wxCommandEvent& event);
+    void OnButtonShowP21Click(wxCommandEvent& event);
+    void OnButtonShowP22Click(wxCommandEvent& event);
+    void OnButtonShowP23Click(wxCommandEvent& event);
+    void OnButtonShowP24Click(wxCommandEvent& event);
+    void OnButtonShowP25Click(wxCommandEvent& event);
+    void OnButtonShowP26Click(wxCommandEvent& event);
+    void OnButtonShowP27Click(wxCommandEvent& event);
+    void OnButtonShowP28Click(wxCommandEvent& event);
 
     int sockfd, playerLocations[8], propertyState[40], balance,
         pendingRoll1, pendingRoll2;
@@ -214,6 +275,34 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_BUTTON(ID_BUTTONDONTBUY, MyFrame::OnButtonDontBuyClick)
     EVT_BUTTON(ID_BUTTONSELL, MyFrame::OnButtonSellClick)
     EVT_BUTTON(ID_BUTTONSTART, MyFrame::OnButtonStartClick)
+    EVT_BUTTON(ID_BUTTONSHOWP1, MyFrame::OnButtonShowP1Click)
+    EVT_BUTTON(ID_BUTTONSHOWP2, MyFrame::OnButtonShowP2Click)
+    EVT_BUTTON(ID_BUTTONSHOWP3, MyFrame::OnButtonShowP3Click)
+    EVT_BUTTON(ID_BUTTONSHOWP4, MyFrame::OnButtonShowP4Click)
+    EVT_BUTTON(ID_BUTTONSHOWP5, MyFrame::OnButtonShowP5Click)
+    EVT_BUTTON(ID_BUTTONSHOWP6, MyFrame::OnButtonShowP6Click)
+    EVT_BUTTON(ID_BUTTONSHOWP7, MyFrame::OnButtonShowP7Click)
+    EVT_BUTTON(ID_BUTTONSHOWP8, MyFrame::OnButtonShowP8Click)
+    EVT_BUTTON(ID_BUTTONSHOWP9, MyFrame::OnButtonShowP9Click)
+    EVT_BUTTON(ID_BUTTONSHOWP10, MyFrame::OnButtonShowP10Click)
+    EVT_BUTTON(ID_BUTTONSHOWP11, MyFrame::OnButtonShowP11Click)
+    EVT_BUTTON(ID_BUTTONSHOWP12, MyFrame::OnButtonShowP12Click)
+    EVT_BUTTON(ID_BUTTONSHOWP13, MyFrame::OnButtonShowP13Click)
+    EVT_BUTTON(ID_BUTTONSHOWP14, MyFrame::OnButtonShowP14Click)
+    EVT_BUTTON(ID_BUTTONSHOWP15, MyFrame::OnButtonShowP15Click)
+    EVT_BUTTON(ID_BUTTONSHOWP16, MyFrame::OnButtonShowP16Click)
+    EVT_BUTTON(ID_BUTTONSHOWP17, MyFrame::OnButtonShowP17Click)
+    EVT_BUTTON(ID_BUTTONSHOWP18, MyFrame::OnButtonShowP18Click)
+    EVT_BUTTON(ID_BUTTONSHOWP19, MyFrame::OnButtonShowP19Click)
+    EVT_BUTTON(ID_BUTTONSHOWP20, MyFrame::OnButtonShowP20Click)
+    EVT_BUTTON(ID_BUTTONSHOWP21, MyFrame::OnButtonShowP21Click)
+    EVT_BUTTON(ID_BUTTONSHOWP22, MyFrame::OnButtonShowP22Click)
+    EVT_BUTTON(ID_BUTTONSHOWP23, MyFrame::OnButtonShowP23Click)
+    EVT_BUTTON(ID_BUTTONSHOWP24, MyFrame::OnButtonShowP24Click)
+    EVT_BUTTON(ID_BUTTONSHOWP25, MyFrame::OnButtonShowP25Click)
+    EVT_BUTTON(ID_BUTTONSHOWP26, MyFrame::OnButtonShowP26Click)
+    EVT_BUTTON(ID_BUTTONSHOWP27, MyFrame::OnButtonShowP27Click)
+    EVT_BUTTON(ID_BUTTONSHOWP28, MyFrame::OnButtonShowP28Click)
     EVT_CLOSE(MyFrame::OnClose)
     EVT_COMMAND(wxID_ANY, wxEVT_THREAD_LOG, MyFrame::logAction)
     EVT_COMMAND(wxID_ANY, wxEVT_THREAD_COMPLETE, MyFrame::OnThreadCompletion)
@@ -817,9 +906,9 @@ MyFrame::MyFrame(const wxString& title, const wxPoint& pos, const wxSize& size, 
         if(i % 10 != 0)
             ownLabel[i] = new wxControl(panel, wxID_ANY, coords[i] + ownLabelOffset[i / 10], ((i / 10) % 2 == 0 ? wxSize(62, 8) : wxSize(8, 62)));
     }
-    wxBitmap emptyBitmap(1, 1);
-    imgDice[0] = new wxStaticBitmap(panel, wxID_ANY, emptyBitmap, wxPoint(365, 550));
-    imgDice[1] = new wxStaticBitmap(panel, wxID_ANY, emptyBitmap, wxPoint(465, 650));
+
+    imgDice[0] = new wxStaticBitmap(panel, wxID_ANY, wxBitmap(1, 1), wxPoint(215, 550));
+    imgDice[1] = new wxStaticBitmap(panel, wxID_ANY, wxBitmap(1, 1), wxPoint(315, 650));
 
     playerNames[0] = new wxStaticText(panel, wxID_ANY, "", wxPoint(215, 185), wxSize(100, 20));
     playerNames[1] = new wxStaticText(panel, wxID_ANY, "", wxPoint(215, 210), wxSize(100, 20));
@@ -834,6 +923,7 @@ MyFrame::MyFrame(const wxString& title, const wxPoint& pos, const wxSize& size, 
     buttonBuy = new wxButton(panel, ID_BUTTONBUY, "Buy", wxPoint(950, 800), wxSize(150, 50));
     buttonDontBuy = new wxButton(panel, ID_BUTTONDONTBUY, "Don't Buy", wxPoint(1150, 800), wxSize(150, 50));
     buttonSell = new wxButton(panel, ID_BUTTONSELL, "Sell", wxPoint(950, 800), wxSize(150, 50));
+    propShow = new wxHtmlWindow(panel, ID_PROPSHOW, wxPoint(450, 250), wxSize(240, 400));
     buttonStart = new wxButton(panel, ID_BUTTONSTART, "START GAME", wxPoint(350, 350), wxSize(200, 200));
 
     buttonDice->Show(false);
@@ -841,6 +931,40 @@ MyFrame::MyFrame(const wxString& title, const wxPoint& pos, const wxSize& size, 
     buttonDontBuy->Show(false);
     buttonSell->Show(false);
     buttonStart->Show(false);
+
+
+    buttonShowP[0] = new wxBitmapButton(panel, ID_BUTTONSHOWP1, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(708, 778), wxSize(75, 122));
+    buttonShowP[1] = new wxBitmapButton(panel, ID_BUTTONSHOWP2, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(708-148, 778), wxSize(75, 122));
+    buttonShowP[2] = new wxBitmapButton(panel, ID_BUTTONSHOWP3, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(708-296, 778), wxSize(75, 122));
+    buttonShowP[3] = new wxBitmapButton(panel, ID_BUTTONSHOWP4, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(708-370, 778), wxSize(75, 122));
+    buttonShowP[4] = new wxBitmapButton(panel, ID_BUTTONSHOWP5, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(708-517, 778), wxSize(75, 122));
+    buttonShowP[5] = new wxBitmapButton(panel, ID_BUTTONSHOWP6, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(708-591, 778), wxSize(75, 122));
+    buttonShowP[6] = new wxBitmapButton(panel, ID_BUTTONSHOWP7, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(0, 704), wxSize(122, 75));
+    buttonShowP[7] = new wxBitmapButton(panel, ID_BUTTONSHOWP8, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(0, 704-74), wxSize(122, 75));
+    buttonShowP[8] = new wxBitmapButton(panel, ID_BUTTONSHOWP9, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(0, 704-148), wxSize(122, 75));
+    buttonShowP[9] = new wxBitmapButton(panel, ID_BUTTONSHOWP10, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(0, 704-222), wxSize(122, 75));
+    buttonShowP[10] = new wxBitmapButton(panel, ID_BUTTONSHOWP11, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(0, 704-296), wxSize(122, 75));
+    buttonShowP[11] = new wxBitmapButton(panel, ID_BUTTONSHOWP12, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(0, 704-370), wxSize(122, 75));
+    buttonShowP[12] = new wxBitmapButton(panel, ID_BUTTONSHOWP13, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(0, 704-518), wxSize(122, 75));
+    buttonShowP[13] = new wxBitmapButton(panel, ID_BUTTONSHOWP14, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(0, 704-591), wxSize(122, 75));
+    buttonShowP[14] = new wxBitmapButton(panel, ID_BUTTONSHOWP15, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(708-591, 0), wxSize(75, 122));
+    buttonShowP[15] = new wxBitmapButton(panel, ID_BUTTONSHOWP16, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(708-444, 0), wxSize(75, 122));
+    buttonShowP[16] = new wxBitmapButton(panel, ID_BUTTONSHOWP17, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(708-370, 0), wxSize(75, 122));
+    buttonShowP[17] = new wxBitmapButton(panel, ID_BUTTONSHOWP18, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(708-296, 0), wxSize(75, 122));
+    buttonShowP[18] = new wxBitmapButton(panel, ID_BUTTONSHOWP19, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(708-222, 0), wxSize(75, 122));
+    buttonShowP[19] = new wxBitmapButton(panel, ID_BUTTONSHOWP20, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(708-148, 0), wxSize(75, 122));
+    buttonShowP[20] = new wxBitmapButton(panel, ID_BUTTONSHOWP21, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(708-74, 0), wxSize(75, 122));
+    buttonShowP[21] = new wxBitmapButton(panel, ID_BUTTONSHOWP22, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(708, 0), wxSize(75, 122));
+    buttonShowP[22] = new wxBitmapButton(panel, ID_BUTTONSHOWP23, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(780, 704-591), wxSize(122, 75));
+    buttonShowP[23] = new wxBitmapButton(panel, ID_BUTTONSHOWP24, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(780, 704-518), wxSize(122, 75));
+    buttonShowP[24] = new wxBitmapButton(panel, ID_BUTTONSHOWP25, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(780, 704-370), wxSize(122, 75));
+    buttonShowP[25] = new wxBitmapButton(panel, ID_BUTTONSHOWP26, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(780, 704-296), wxSize(122, 75));
+    buttonShowP[26] = new wxBitmapButton(panel, ID_BUTTONSHOWP27, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(780, 704-148), wxSize(122, 75));
+    buttonShowP[27] = new wxBitmapButton(panel, ID_BUTTONSHOWP28, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(780, 704), wxSize(122, 75));
+    for (int i = 0; i < 28; i++) {
+        buttonShowP[i]->SetBackgroundColour(wxColour(255, 255, 255, 0));
+        buttonShowP[i]->Show(true);
+    }
 
     wxBitmap bmpwin("../assets/win.png", wxBITMAP_TYPE_PNG);
     imgWin = new wxStaticBitmap(panel, wxID_ANY, bmpwin, wxPoint(155, 165));
@@ -924,9 +1048,138 @@ void MyFrame::OnButtonStartClick(wxCommandEvent& event)
     Writen(sockfd, const_cast<char*>("START\n"), 7);
 }
 
+void MyFrame::OnButtonShowP1Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
 
+void MyFrame::OnButtonShowP2Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+
+void MyFrame::OnButtonShowP3Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+
+void MyFrame::OnButtonShowP4Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+
+void MyFrame::OnButtonShowP5Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+
+void MyFrame::OnButtonShowP6Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+
+void MyFrame::OnButtonShowP7Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+
+void MyFrame::OnButtonShowP8Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+
+void MyFrame::OnButtonShowP9Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property test</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+
+void MyFrame::OnButtonShowP10Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+
+void MyFrame::OnButtonShowP11Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+
+void MyFrame::OnButtonShowP12Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+
+void MyFrame::OnButtonShowP13Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+
+void MyFrame::OnButtonShowP14Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+
+void MyFrame::OnButtonShowP15Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+
+void MyFrame::OnButtonShowP16Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+
+void MyFrame::OnButtonShowP17Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+
+void MyFrame::OnButtonShowP18Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+
+void MyFrame::OnButtonShowP19Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+
+void MyFrame::OnButtonShowP20Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+
+void MyFrame::OnButtonShowP21Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+
+void MyFrame::OnButtonShowP22Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+void MyFrame::OnButtonShowP23Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+void MyFrame::OnButtonShowP24Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+void MyFrame::OnButtonShowP25Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+void MyFrame::OnButtonShowP26Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+void MyFrame::OnButtonShowP27Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
+
+void MyFrame::OnButtonShowP28Click(wxCommandEvent& event) 
+{
+    propShow->SetPage("<html><body><table><thead><tr><th colspan=\"2\">Property</th></tr></thead><tbody><tr><td>1 House</td><td>$100</td></tr></tbody></table></body></html>");
+}
 wxIMPLEMENT_APP(MyApp);
-
-
-
-
