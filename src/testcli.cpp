@@ -26,7 +26,7 @@ string boardImageSrc = "../assets/board.jpg",
     propertyImageSrc[8] = {"../assets/house00.png", "../assets/house01.png", "../assets/house02.png", "../assets/house03.png", "../assets/house04.png", "../assets/hotel.png"},
     vertPropertyImageSrc[6] = {"../assets/house00vertical.png", "../assets/house01vertical.png", "../assets/house02vertical.png", "../assets/house03vertical.png", "../assets/house04vertical.png", "../assets/hotelvertical.png"};
 
-vector<string> eventPrefixes = {"move ", "build ", "log ", "balance ", "roll", "moveto ", "addprop ", "remprop ", "asktobuy", "asktosell", "isfirst", "setplayers ", "remplayer ", "ownprop "};
+vector<string> eventPrefixes = {"move ", "build ", "log ", "balance ", "roll", "moveto ", "addprop ", "remprop ", "asktobuy", "asktosell", "isfirst", "setplayers ", "remplayer ", "ownprop ", "unownprop ", "win"};
 
 //usage: (split commands with /, for example: move 3 7/log player 3 moved for 7 steps)
 //       move playerId steps    (moves playerId for a number of steps)
@@ -43,6 +43,8 @@ vector<string> eventPrefixes = {"move ", "build ", "log ", "balance ", "roll", "
 //       setplayers playerCount playername0 playername1 playername2..... (tells the client how many players to render and their player names)
 //       remplayer playerId     (removes player from the game (unrender))
 //       ownprop playerId propertyId    (set property to be owned by playerId)
+//       unownprop playerId propertyId  (reset the ownership of a property)
+//       win                    (displays the win message and exits thread loop)
 
 wxPoint coords[40] = 
 {
@@ -125,6 +127,8 @@ wxDECLARE_EVENT(wxEVT_THREAD_IS_FIRST, wxCommandEvent);
 wxDECLARE_EVENT(wxEVT_THREAD_SET_PLAYERS, wxCommandEvent);
 wxDECLARE_EVENT(wxEVT_THREAD_REMOVE_PLAYER, wxCommandEvent);
 wxDECLARE_EVENT(wxEVT_THREAD_OWN_PROPERTY, wxCommandEvent);
+wxDECLARE_EVENT(wxEVT_THREAD_UNOWN_PROPERTY, wxCommandEvent);
+wxDECLARE_EVENT(wxEVT_THREAD_WIN, wxCommandEvent);
 
 class MyFrame;
 
@@ -171,6 +175,8 @@ public:
     void setPlayers(wxCommandEvent& event);
     void removePlayer(wxCommandEvent& event);
     void ownProperty(wxCommandEvent& event);
+    void unownProperty(wxCommandEvent& event);
+    void win(wxCommandEvent& event);
 
     MyThread *m_pThread;
     wxCriticalSection m_pThreadCS;
@@ -182,7 +188,7 @@ protected:
     wxButton *buttonDontBuy;
     wxButton *buttonSell;
     wxButton *buttonStart;
-    wxStaticBitmap *imageCtrl, *imgPlayers[8], *imgProperty[40];
+    wxStaticBitmap *imageCtrl, *imgPlayers[8], *imgProperty[40], *imgWin;
     wxTimer *timer;
     wxTextCtrl *textDisplay, *balanceDisplay;
     wxControl *ownLabel[40];
@@ -223,6 +229,8 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_COMMAND(wxID_ANY, wxEVT_THREAD_SET_PLAYERS, MyFrame::setPlayers)
     EVT_COMMAND(wxID_ANY, wxEVT_THREAD_REMOVE_PLAYER, MyFrame::removePlayer)
     EVT_COMMAND(wxID_ANY, wxEVT_THREAD_OWN_PROPERTY, MyFrame::ownProperty)
+    EVT_COMMAND(wxID_ANY, wxEVT_THREAD_UNOWN_PROPERTY, MyFrame::unownProperty)
+    EVT_COMMAND(wxID_ANY, wxEVT_THREAD_WIN, MyFrame::win)
 wxEND_EVENT_TABLE()
 
 wxDEFINE_EVENT(wxEVT_THREAD_COMPLETE, wxCommandEvent);
@@ -240,6 +248,8 @@ wxDEFINE_EVENT(wxEVT_THREAD_IS_FIRST, wxCommandEvent);
 wxDEFINE_EVENT(wxEVT_THREAD_SET_PLAYERS, wxCommandEvent);
 wxDEFINE_EVENT(wxEVT_THREAD_REMOVE_PLAYER, wxCommandEvent);
 wxDEFINE_EVENT(wxEVT_THREAD_OWN_PROPERTY, wxCommandEvent);
+wxDEFINE_EVENT(wxEVT_THREAD_UNOWN_PROPERTY, wxCommandEvent);
+wxDEFINE_EVENT(wxEVT_THREAD_WIN, wxCommandEvent);
 
 bool MyApp::OnInit()
 {
@@ -257,7 +267,7 @@ bool MyApp::OnInit()
 
     if(connect(connfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0)
     {
-        wxLogError("Failed to connect to local host");
+        wxLogError("Failed to connect to host " + argv[1]);
         return(-1);
     }
 
@@ -513,6 +523,33 @@ wxThread::ExitCode MyThread::Entry()
 
                                 break;                               
                             }
+                            case 14: //unown property
+                            {
+                                try
+                                {
+                                    int modifyValue = stoi(argument);
+                                    wxCommandEvent evt(wxEVT_THREAD_UNOWN_PROPERTY, wxID_ANY);
+
+                                    evt.SetInt(modifyValue);
+                                    m_pHandler->GetEventHandler()->AddPendingEvent(evt);   
+                                }
+                                catch (const invalid_argument& e) 
+                                {
+                                    wxMessageOutputDebug().Printf("input: %s", "ERROR: Invalid unownprop command argument: " + argument);
+                                }
+                                catch (const out_of_range& e) 
+                                {
+                                    wxMessageOutputDebug().Printf("input: %s", "ERROR: Invalid unownprop command argument: " + argument);
+                                }
+
+                                break;
+                            }
+                            case 15:
+                            {
+                                wxCommandEvent evt(wxEVT_THREAD_WIN, wxID_ANY);
+                                m_pHandler->GetEventHandler()->AddPendingEvent(evt);
+                                goto exit;
+                            }
                         }
 
                         break;
@@ -522,6 +559,7 @@ wxThread::ExitCode MyThread::Entry()
         }
     }
 
+exit:
     wxQueueEvent(m_pHandler, new wxCommandEvent(wxEVT_THREAD_COMPLETE));
     return (wxThread::ExitCode)0;
 }
@@ -700,7 +738,20 @@ void MyFrame::ownProperty(wxCommandEvent& event)
 
     if(iss >> playerId >> propertyId)
         ownLabel[propertyId]->SetBackgroundColour(playerColors[playerId]);
+    else
+        wxMessageOutputDebug().Printf("input: %s", "ERROR: Invalid ownprop command argument: " + argument);
+}
 
+void MyFrame::unownProperty(wxCommandEvent& event)
+{
+    int propertyId = event.GetInt();
+
+    ownLabel[propertyId]->SetBackgroundColour(wxNullColour);
+}
+
+void MyFrame::win(wxCommandEvent& event)
+{
+    imgWin->Show(true);
 }
 
 MyThread::~MyThread()
@@ -788,6 +839,10 @@ MyFrame::MyFrame(const wxString& title, const wxPoint& pos, const wxSize& size, 
     buttonDontBuy->Show(false);
     buttonSell->Show(false);
     buttonStart->Show(false);
+
+    wxBitmap bmpwin("../assets/win.png", wxBITMAP_TYPE_PNG);
+    imgWin = new wxStaticBitmap(panel, wxID_ANY, bmpwin, wxPoint(155, 165));
+    imgWin->Show(false);
     
 }
 
