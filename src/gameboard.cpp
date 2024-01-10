@@ -4,12 +4,18 @@
 #include <cstdlib>
 #include <iostream>
 #include <time.h>
+#include <chrono>
+#include <thread>
 
 extern "C" { 
     #include "unp.h"
 } 
 
 using namespace std;
+using namespace std::this_thread; // sleep_for, sleep_until
+using namespace std::chrono; // nanoseconds, system_clock, seconds
+
+
 
 
 //this is for server
@@ -24,6 +30,7 @@ using namespace std;
         每次送訊息給所有人就要初始化一個vector, not good
     還沒改完io:
         setBankrupt, checkbuy, sell
+        log who buy what
 */
 
 
@@ -65,9 +72,11 @@ struct WaitingRoom {
 
 void sendToUser(int sockfd, char *str) {
     Writen(sockfd, str, strlen(str));
+    sleep_for(seconds(1));
 }
 void sendToUser(int sockfd, string &str) {
     Writen(sockfd, const_cast<char *>(str.c_str()), str.size());
+    sleep_for(seconds(1));
 }
 
 void sendToAllLivePlayer(Gameboard *board, char *str);
@@ -823,14 +832,8 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
                 cout << "現在是 " << this->players[this->turnPlayer].getName() << " 的回合\n";
                 char buf[MAXLINE];
                 sprintf(buf, "log ----------It\'s %s\'s turn.----------/\n", this->players[this->turnPlayer].getName().c_str());
-                ;
-                cout << "OK\n" << buf;
-                /*
-                for (int i = 0; i < this->getSurvivors()->size(); i++) {
-                    cout << this->getSurvivors()->at(i)->getSockfd() << " ";
-                }*/
-                cout << this->survivors->size() << "\n";
-                //sendToAllLivePlayer(this, buf);
+                //cout << this->survivors->size() << "\n";
+                sendToAllLivePlayer(this, buf);
                 
                 cout << "現在狀況: ";
                 for (int i = 0; i < this->playerNum; i++) {
@@ -1671,6 +1674,7 @@ void Card::execute(Player *player) {
 }
 
 int Player::getUserInput(char *buf) {
+    sleep_for(seconds(1));
     int n = Readline(this->sockfd, buf, MAXLINE); //scanf("%d", &input);
     if (n <= 0) {
         if (errno == EINTR) {
@@ -1684,6 +1688,7 @@ int Player::getUserInput(char *buf) {
     return n;
 }
 int Field::getUserInput(char *buf) {
+    sleep_for(seconds(1));
     int n = Readline(this->gameboard->getTurnPlayer()->getSockfd(), buf, MAXLINE);
     if (n <= 0) {
         if (errno == EINTR) {
@@ -1697,6 +1702,7 @@ int Field::getUserInput(char *buf) {
     return n;
 }
 int Gameboard::getUserInput(char *buf) {
+    sleep_for(seconds(1));
     int n = Readline(this->getTurnPlayer()->getSockfd(), buf, MAXLINE);
     if (n <= 0) {
         if (errno == EINTR) {
@@ -1715,6 +1721,7 @@ void sendToAllLivePlayer(Gameboard *board, char *str) {
     for (int i = 0; i < (int)(v->size()); i++) {
         sendToUser((*v)[i]->getSockfd(), str);
     }
+    sleep_for(seconds(1));
 }
 
 void sendToAllLivePlayer(Gameboard *board, string &str) {
@@ -1722,6 +1729,7 @@ void sendToAllLivePlayer(Gameboard *board, string &str) {
     for (int i = 0; i < (int)(v->size()); i++) {
         sendToUser((*v)[i]->getSockfd(), str);
     }
+    sleep_for(seconds(1));
 }
 
 
@@ -1746,7 +1754,7 @@ void game(WaitingRoom *room) {
     int turnNum = 1;
     Signal(SIGALRM, sig_alrm);
     while (true) {
-        alarm(600);
+        alarm(20);
         //board.setBankrupt(command);
         cout << "\n\n\n\n- - - - - - - - - - - - - Turn " << turnNum++ << " - - - - - - - - - - - - -\n\n";
         board.nextTurn();
@@ -1763,6 +1771,16 @@ void game(WaitingRoom *room) {
             }
         } else {
             Dice dice = roll();
+            string s = "";
+            commandRoll(s);
+            sendToUser(board.getTurnPlayer()->getSockfd(), s);
+            char buf[MAXLINE];
+            int n = board.getUserInput(buf);
+            buf[n] = '\0';
+                cout << buf << "\n";
+            if (strcmp(buf, "OK") == 0) {
+                cout << "roll\n";
+            }
             board.getTurnPlayer()->move(dice);
             if (dice.d1 == dice.d2) {
                 board.samePlayerNextTurn();
