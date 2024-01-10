@@ -1911,14 +1911,11 @@ int main(int argc, char **argv)
 	servaddr.sin_port        = htons(SERV_PORT);
 
 	Bind(listenfd, (SA *) &servaddr, sizeof(servaddr));
-
 	Listen(listenfd, LISTENQ);
-
 	Signal(SIGCHLD, sig_chld);	
 
     int pNum = 0;
     WaitingRoom room = WaitingRoom();
-
 
     if (!pNum) {
         if ( (connfd = accept(listenfd, (SA *) &cliaddr, &clilen)) < 0) {
@@ -1936,9 +1933,6 @@ int main(int argc, char **argv)
             Writen(connfd, const_cast<char*>("isfirst/\n"), 9);
             cout << "First\n";
         }
-    
-
-
 
         for (;;){
 
@@ -1976,19 +1970,14 @@ int main(int argc, char **argv)
                 else {
                     pNum += 1;
                     char buf[MAXLINE];
-                    int n = Read(connfd, buf, MAXLINE-1);
+                    int n = Readline(connfd, buf, MAXLINE-1);
                     buf[n-1] = '\0';
                     room.addPlayer(buf, connfd);
-                    if(pNum == 1) FD_SET(connfd, &rset);
-                    char sendline[MAXLINE];
-                    snprintf(sendline, MAXLINE, "You are the #%d player. Wait for game starting.\n", pNum);
-
-                    Writen(connfd, sendline, MAXLINE);
+                    if(pNum > 0) FD_SET(connfd, &rset);
                     cout << buf << " is #" << pNum << "\n";
                 }
 
             }
-
             
             //按下開始
             if(FD_ISSET(room.sockfds[0], &rset)) {
@@ -2012,16 +2001,8 @@ int main(int argc, char **argv)
                     room = WaitingRoom();
                     pNum = 0;
                 }
-
             }
-            
-
-        
         }    
-            
-        //room = WaitingRoom();
-        //cout << room.playerNum << "\n";
     }
-
 }
 
