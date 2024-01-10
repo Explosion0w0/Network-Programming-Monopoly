@@ -1672,7 +1672,7 @@ void Field::checkBuy(Player *player) {
                     } else if ((strcmp(buf, "YES\n") == 0) || (strcmp(buf, "YES") == 0)) {
                         player->pay(this->rentInfo.houseCost);
                         this->house++;
-                        sprintf(buf, "build %d/log %s built a %s on %s./\n", this->index, player->getName().c_str(), ((this->house == 4) ? "hotel" : "house"), this->name.c_str());
+                        sprintf(buf, "build %d 1/log %s built a %s on %s./\n", this->index, player->getName().c_str(), ((this->house == 4) ? "hotel" : "house"), this->name.c_str());
                         sendToAllLivePlayer(this->gameboard, buf);
                         cout << player->getName() << " 在 " << this->name << ((this->house == 5) ? " 蓋了旅館\n" : " 蓋了房子\n");
                     }
