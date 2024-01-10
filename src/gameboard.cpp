@@ -70,6 +70,7 @@ struct WaitingRoom {
     }
 };
 
+
 void sendToUser(int sockfd, char *str) {
     Writen(sockfd, str, strlen(str));
     sleep_for(seconds(1));
@@ -102,9 +103,9 @@ void commandMoveTo(string &s, int playerId, int index) {
     if (s.back() == '\n') s.pop_back();
     s.append("moveto ").append(to_string(playerId)).append(" ").append(to_string(index)).append("/\n");    
 }
-void commandRoll(string &s) {
+void commandRoll(string &s, int d1, int d2) {
     if (s.back() == '\n') s.pop_back();
-    s.append("roll/\n");    
+    s.append("roll ").append(to_string(d1)).append(" ").append(to_string(d2)).append("/\n");    
 }
 void commandAskToBuy(string &s) {
     if (s.back() == '\n') s.pop_back();
@@ -129,6 +130,10 @@ void commandAddProp(string &s, string &str) {
 void commandRemProp(string &s, string &str) {
     if (s.back() == '\n') s.pop_back();
     s.append("remprop ").append(str).append("/\n");    
+}
+void commandUnownProp(string &s, int propertyId) {
+    if (s.back() == '\n') s.pop_back();
+    s.append("unownprop ").append(to_string(propertyId)).append("/\n");    
 }
 
 
@@ -404,35 +409,8 @@ class Player {
                 cout << this->name << " 被關進監獄了，剩餘 3 回合\n";
             }
         }
-        void tryEscapeJail() {
-            if (this->inJail >= 3) {
-                this->inJail = 0;
-                string s = "", msg = "";
-                msg.append(this->name).append(" was released from the jail.");
-                commandLog(s, msg);
-                cout << this->name << " 從監獄中被釋放了\n";
-                sendToAllLivePlayer(this->gameboard, s);
-                this->lastMove = roll();
-            } else {
-                Dice dice = roll();
-                if (dice.d1 == dice.d2) {
-                    this->inJail = 0;
-                    this->lastMove = dice;
-                    string s = "", msg = "";
-                    msg.append(this->name).append(" was released from the jail.");
-                    commandLog(s, msg);
-                    sendToAllLivePlayer(this->gameboard, s);
-                } else {
-                    cout << this->name << " 逃獄失敗，剩餘 " << 3 - this->inJail << " 回合\n";
-                    string s = "", msg = "";
-                    msg.append(this->name).append(" failed to escape, ").append(to_string(3 - this->inJail)).append(" turns left.");
-                    commandLog(s, msg);
-                    sendToAllLivePlayer(this->gameboard, s);
-                    this->inJail++;
-                }
-                
-            }
-        }
+        void tryEscapeJail();
+        
         int isInJail() const {return this->inJail;}
         void declareBankrupt();
         int sellForMoney();
@@ -602,74 +580,8 @@ class Field {   // 格子
             }
             
         }
-        void checkBuy(Player *player) {
-            if (player->getMoney() >= this->rentInfo.cost) {
-                string s = "", msg = "";
-                msg.append("Do you want to by ").append(this->name).append(" ($").append(to_string(this->rentInfo.cost)).append(")?");
-                commandAskToBuy(s);
-                commandLog(s, msg);
-                sendToUser(player->getSockfd(), s);
-                //cout << "是否購買 " << this->name << " (" << this->rentInfo.cost << "$) ? 0:no 1:yes\n";
-                char buf[MAXLINE];
-                this->getUserInput(buf);
-                if (strcmp(buf, "No\n") == 0) {
-                    return;
-                } else if (strcmp(buf, "Yes\n") == 0) {
-                    player->pay(this->rentInfo.cost);
-                    this->owner = player;
-                    /*
-                    
-                    
-                        ?
-                    
-                    
-                    */
-                    string s = "", msg = "";
-                    msg.append(this->name).append(" $").append(to_string(this->rentInfo.cost/2)).append(" | $").append(to_string(this->rentInfo.houseCost/2));
-                    commandAddProp(s, msg);
-                    sendToUser(player->getSockfd(), s);
-                    s = "";
-                    msg = "";
-                    msg.append(player->getName()).append(" buyed ").append(this->name).append(".");
-                    commandOwnProp(s, player->getId(), this->index);
-                    commandLog(s, msg);
-                    sendToAllLivePlayer(this->gameboard, s);
-                    cout << player->getName() << " 購買了 " << this->name << "\n";
-                }
-                
-            } else {
-                //cout << "金錢不足，無法購買\n";
-                string s = "", msg = "You don\'t have enough money to buy this property.";
-                commandLog(s, msg);
-                sendToUser(player->getSockfd(), s);
-            }
-        }
-        void checkBuildHouse(Player *player) {
-            if (this->house < 5) {
-                if (player->getMoney() >= this->rentInfo.houseCost) {
-                    char buf[MAXLINE];
-                    sprintf(buf, "asktobuy/log Do you want to build a %s on %s ($%d)?/\n", ((this->house == 4) ? "hotel" : "house"), this->name.c_str(), this->rentInfo.houseCost);
-                    sendToUser(player->getSockfd(), buf);
-                    //cout << "是否在 " << this->name << ((this->house == 4) ? " 蓋旅館 (" : " 蓋房子 (") << this->rentInfo.houseCost << "$) ? 0:no 1:yes\n";
-                    this->getUserInput(buf);
-                    if (strcmp(buf, "No\n") == 0) {
-                        return;
-                    } else if (strcmp(buf, "Yes\n") == 0) {
-                        player->pay(this->rentInfo.houseCost);
-                        this->house++;
-                        sprintf(buf, "build %d/log %s build a %s on %s./\n", this->index, player->getName().c_str(), ((this->house == 4) ? "hotel" : "house"), this->name.c_str());
-                        sendToAllLivePlayer(this->gameboard, buf);
-                        cout << player->getName() << " 在 " << this->name << ((this->house == 5) ? " 蓋了旅館\n" : " 蓋了房子\n");
-                    }
-                } else {
-                    char buf[MAXLINE];
-                    sprintf(buf, "log You don\'t have enough money to build a %s./\n", ((this->house == 4) ? "hotel" : "house"));
-                    sendToUser(player->getSockfd(), buf);
-                    //cout << "金錢不足，無法蓋" << ((this->house == 4) ? "旅館\n" : "房子\n");
-                }
-            }
-            
-        }
+        void checkBuy(Player *player);
+        void checkBuildHouse(Player *player);
         int calcRent() {
             int sameColor = 0;
             int mult = 3;
@@ -743,12 +655,10 @@ class Field {   // 格子
         }
         void sell() {
             this->owner = nullptr;
-            /*
-            
-                ?need de owner
-            
-            */
             this->house = 0;
+            string s = "";
+            commandUnownProp(s, this->index);
+            sendToAllLivePlayer(this->gameboard, s);
         }
     private:
         int type; // 0:Empty 1:起點 2:土地 3:車站 4:公共事業 5:機會 6:命運 7:入獄 8:監獄 9:稅
@@ -856,26 +766,58 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
             }
             return n;
         }
-        string winner() {
+        int winner() {
             if (this->checkEnd() <= 1) {
                 int n;
                 for (n = 0; n < this->playerNum; n++) {
                     if (this->bankruptStat[n] == 0) {
-                        return this->players[n].getName();
+                        return n;
                     }
                 }
             }
-            return "";
+            return -1;
         }
-        /*
-        
-        
-        
-        
-        
-        
-        
-        */
+        int waitForTPInput(char *buf) {
+            fd_set rset;
+            FD_ZERO(&rset);
+            timeval tv = {300,0};
+            for (;;) {
+                int maxfd = 0;
+                for(int i = 0; i < (int)(this->survivors->size()); i++) {
+                    int fd = this->survivors->at(i)->getSockfd();
+                    FD_SET(fd, &rset);
+                    if (fd > maxfd) {
+                        maxfd = fd;
+                    } 
+                }
+                maxfd++;
+                Select(maxfd, &rset, NULL, NULL, &tv);
+                for(int i = 0; i < (int)(this->survivors->size()); i++) {
+                    int fd = this->survivors->at(i)->getSockfd();
+                    if (FD_ISSET(fd, &rset)) {
+                        if (this->survivors->at(i) == this->getTurnPlayer()) {
+                            int n = Readline(fd, buf, MAXLINE);
+                            buf[n] = '\0';
+                            if (n <= 0) {
+                                this->playerLeave(this->survivors->at(i)->getId());
+                                return n;
+                            } 
+                            return n;
+                        } else {
+                            int n = Readline(fd, buf, MAXLINE);
+                            if (n <= 0) {
+                                if (errno == EINTR) {
+                                    this->playerTimeout(this->getTurnPlayerNum());
+                                    return 0;
+                                } else {
+                                    this->playerLeave(this->survivors->at(i)->getId());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         void setBankrupt(int id) {
             this->bankruptStat[id] = 1;
             for (int i = 0; i < 40; i++) {
@@ -1251,7 +1193,8 @@ int Player::sellForMoney() { // return 0:money not enough -> bankrupt  1:money n
         char buf[MAXLINE];
         int propIndex, fNum = 0;
         //cout << "選擇要販售的土地(編號): ";
-        if (this->getUserInput(buf) <= 0) return 1;
+        if (this->gameboard->waitForTPInput(buf) <= 0) return 1;
+        cout << buf << "|" << strlen(buf) << "\n";
         sscanf(buf, "%d", &propIndex);
         for (int i = 0; i < (int)(priceList.size()); i++) {
             if (priceList[i].fieldNum == propIndex) {
@@ -1673,6 +1616,124 @@ void Card::execute(Player *player) {
             
 }
 
+
+void Field::checkBuy(Player *player) {
+            if (player->getMoney() >= this->rentInfo.cost) {
+                string s = "", msg = "";
+                msg.append("Do you want to by ").append(this->name).append(" ($").append(to_string(this->rentInfo.cost)).append(")?");
+                commandAskToBuy(s);
+                commandLog(s, msg);
+                sendToUser(player->getSockfd(), s);
+                //cout << "是否購買 " << this->name << " (" << this->rentInfo.cost << "$) ? 0:no 1:yes\n";
+                char buf[MAXLINE];
+                //this->getUserInput(buf);
+                this->gameboard->waitForTPInput(buf);
+                cout << "BUF" << buf << strlen(buf) << "\n";
+                if ((strcmp(buf, "NO\n") == 0) || (strcmp(buf, "NO") == 0)) {
+                    return;
+                } else if ((strcmp(buf, "YES\n") == 0) || (strcmp(buf, "YES") == 0)) {
+                    player->pay(this->rentInfo.cost);
+                    this->owner = player;
+                    
+                    string s = "", msg = "";
+                    msg.append(this->name).append(" $").append(to_string(this->rentInfo.cost/2)).append(" | $").append(to_string(this->rentInfo.houseCost/2));
+                    commandAddProp(s, msg);
+                    sendToUser(player->getSockfd(), s);
+                    s = "";
+                    msg = "";
+                    msg.append(player->getName()).append(" buyed ").append(this->name).append(".");
+                    commandOwnProp(s, player->getId(), this->index);
+                    commandLog(s, msg);
+                    sendToAllLivePlayer(this->gameboard, s);
+                    cout << player->getName() << " 購買了 " << this->name << "\n";
+                }
+                
+            } else {
+                //cout << "金錢不足，無法購買\n";
+                string s = "", msg = "You don\'t have enough money to buy this property.";
+                commandLog(s, msg);
+                sendToUser(player->getSockfd(), s);
+            }
+        }
+        void Field::checkBuildHouse(Player *player) {
+            if (this->house < 5) {
+                if (player->getMoney() >= this->rentInfo.houseCost) {
+                    char buf[MAXLINE];
+                    sprintf(buf, "asktobuy/log Do you want to build a %s on %s ($%d)?/\n", ((this->house == 4) ? "hotel" : "house"), this->name.c_str(), this->rentInfo.houseCost);
+                    sendToUser(player->getSockfd(), buf);
+                    //cout << "是否在 " << this->name << ((this->house == 4) ? " 蓋旅館 (" : " 蓋房子 (") << this->rentInfo.houseCost << "$) ? 0:no 1:yes\n";
+                    //this->getUserInput(buf);
+                    this->gameboard->waitForTPInput(buf);
+                    cout << buf << "|" << strlen(buf) << "\n";
+                    if ((strcmp(buf, "NO\n") == 0) || (strcmp(buf, "NO") == 0)) {
+                        return;
+                    } else if ((strcmp(buf, "YES\n") == 0) || (strcmp(buf, "YES") == 0)) {
+                        player->pay(this->rentInfo.houseCost);
+                        this->house++;
+                        sprintf(buf, "build %d/log %s build a %s on %s./\n", this->index, player->getName().c_str(), ((this->house == 4) ? "hotel" : "house"), this->name.c_str());
+                        sendToAllLivePlayer(this->gameboard, buf);
+                        cout << player->getName() << " 在 " << this->name << ((this->house == 5) ? " 蓋了旅館\n" : " 蓋了房子\n");
+                    }
+                } else {
+                    char buf[MAXLINE];
+                    sprintf(buf, "log You don\'t have enough money to build a %s./\n", ((this->house == 4) ? "hotel" : "house"));
+                    sendToUser(player->getSockfd(), buf);
+                    //cout << "金錢不足，無法蓋" << ((this->house == 4) ? "旅館\n" : "房子\n");
+                }
+            }
+            
+        }
+
+
+void Player::tryEscapeJail() {
+            if (this->inJail >= 3) {
+                this->inJail = 0;
+                string s = "", msg = "";
+                msg.append(this->name).append(" was released from the jail.");
+                commandLog(s, msg);
+                cout << this->name << " 從監獄中被釋放了\n";
+                sendToAllLivePlayer(this->gameboard, s);
+                this->lastMove = roll();
+                string st = "";
+                commandRoll(st, this->lastMove.d1, this->lastMove.d2);
+                sendToUser(this->sockfd, st);
+                char buf[MAXLINE];
+                if (this->gameboard->waitForTPInput(buf) <= 0) {
+                    return;
+                }
+                cout << buf << "|" << strlen(buf) << "\n";
+            } else {
+                Dice dice = roll();
+                string s = "", msg = "";
+                commandRoll(s, dice.d1, dice.d2);
+                sendToUser(this->sockfd, s);
+                char buf[MAXLINE];
+                if (this->gameboard->waitForTPInput(buf) <= 0) {
+                    return;
+                }
+                cout << buf << "|" << strlen(buf) << "\n";
+                msg.append(this->name).append(" rolled ").append(to_string(dice.d1)).append(" and ").append(to_string(dice.d2)).append(".");
+                s = "";
+                commandLog(s, msg);
+                msg = "";
+                if (dice.d1 == dice.d2) {
+                    this->inJail = 0;
+                    this->lastMove = dice;
+                    msg.append(this->name).append(" was released from the jail.");
+                    commandLog(s, msg);
+                    sendToAllLivePlayer(this->gameboard, s);
+                } else {
+                    cout << this->name << " 逃獄失敗，剩餘 " << 3 - this->inJail << " 回合\n";
+                    string s = "", msg = "";
+                    msg.append(this->name).append(" failed to escape, ").append(to_string(3 - this->inJail)).append(" turns left.");
+                    commandLog(s, msg);
+                    sendToAllLivePlayer(this->gameboard, s);
+                    this->inJail++;
+                }
+                
+            }
+        }
+
 int Player::getUserInput(char *buf) {
     sleep_for(seconds(1));
     int n = Readline(this->sockfd, buf, MAXLINE); //scanf("%d", &input);
@@ -1749,13 +1810,14 @@ void game(WaitingRoom *room) {
     string s = "";
     commandSetPlayers(s, &board);
     sendToAllLivePlayer(&board, s);
-
-    int command;
+    int maxfdp1;
+    fd_set rset;
+    FD_ZERO(&rset);
+    
     int turnNum = 1;
     Signal(SIGALRM, sig_alrm);
     while (true) {
-        alarm(20);
-        //board.setBankrupt(command);
+        alarm(60);
         cout << "\n\n\n\n- - - - - - - - - - - - - Turn " << turnNum++ << " - - - - - - - - - - - - -\n\n";
         board.nextTurn();
         if (board.isTurnPlayerBankrupt()) goto TurnEnd;
@@ -1771,16 +1833,19 @@ void game(WaitingRoom *room) {
             }
         } else {
             Dice dice = roll();
-            string s = "";
-            commandRoll(s);
+            string s = "", msg = "";
+            commandRoll(s, dice.d1, dice.d2);
             sendToUser(board.getTurnPlayer()->getSockfd(), s);
             char buf[MAXLINE];
-            int n = board.getUserInput(buf);
-            buf[n] = '\0';
-                cout << buf << "\n";
-            if (strcmp(buf, "OK") == 0) {
+            board.waitForTPInput(buf);
+            cout << buf << "|" << strlen(buf) << "\n";
+            if ((strcmp(buf, "OK") == 0) || (strcmp(buf, "OK\n") == 0)) {
                 cout << "roll\n";
             }
+            s = "";
+            msg.append(board.getTurnPlayer()->getName()).append(" rolled ").append(to_string(dice.d1)).append(" and ").append(to_string(dice.d2)).append(".");
+            commandLog(s, msg);
+            sendToAllLivePlayer(&board, s);
             board.getTurnPlayer()->move(dice);
             if (dice.d1 == dice.d2) {
                 board.samePlayerNextTurn();
@@ -1795,16 +1860,21 @@ void game(WaitingRoom *room) {
 TurnEnd:
         alarm(0);
         board.checkEnd();
-        if ((board.isEnded()) || (command == -1)) {
+        if ((board.isEnded())) {
             break;
         }
     }
 
     if ((board.isEnded())) {
-        cout << board.winner() << " 贏了！\n";
+        int id = board.winner();
+        if (id != -1) {
+            string win = "win/\n";
+            sendToUser(board.getPlayer(id)->getSockfd(), const_cast<char *>(win.c_str()));
+            cout << board.getPlayer(id)->getName() << " 贏了！\n";
+        }
     }
     
-
+    sleep_for(seconds(10));
     
 }
 
