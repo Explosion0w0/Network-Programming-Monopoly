@@ -169,7 +169,7 @@ Card randCard(int cardType) {
                 descr = "You dropped the tofu pudding you just bought. Lose $30";
                 break;
             case 2:
-                descr = "You are stuck by a stray bullet when strolling. Pay $150 in medical expenses.";
+                descr = "You were struck by a stray bullet when strolling. Pay $150 in medical expenses.";
                 break;
             case 3:
                 descr = "Topple the towering walls of capitalism, let the wealth be equally shared among all comrades.";
@@ -403,7 +403,7 @@ class Player {
                 this->position = 10;
                 string s = "", msg = "";
                 commandMoveTo(s, this->id, 10);
-                msg.append(this->name).append(" was send to the jail, 3 turns left.");
+                msg.append(this->name).append(" was sent to the jail, 3 rounds remaining.");
                 commandLog(s, msg);
                 sendToAllLivePlayer(this->gameboard, s);
                 cout << this->name << " 被關進監獄了，剩餘 3 回合\n";
@@ -477,7 +477,7 @@ class Field {   // 格子
                         player->earn(200);
                         cout << player->getName() << " 經過起點, 獲得$200\n";
                         string s = "", msg = "";
-                        msg.append(player->getName()).append(" passed the START, earn $200.");
+                        msg.append(player->getName()).append(" passed START and earned $200.");
                         commandLog(s, msg);
                         sendToAllLivePlayer(this->gameboard, s);
                         player->resetPassedStart();
@@ -527,7 +527,7 @@ class Field {   // 格子
                 case 5: {
                     Card card = randCard(0);
                     string s = "", msg = "";
-                    msg.append(player->getName()).append(" drawn \"").append(card.getDesciption()).append("\"");
+                    msg.append(player->getName()).append(" drew \"").append(card.getDesciption()).append("\"");
                     commandLog(s, msg);
                     sendToAllLivePlayer(this->gameboard, s);
                     cout << player->getName() << "抽到 \"" << card.getDesciption() << "\"\n";
@@ -541,7 +541,7 @@ class Field {   // 格子
                 case 6: {
                     Card card = randCard(1);
                     string s = "", msg = "";
-                    msg.append(player->getName()).append(" drawn \"").append(card.getDesciption()).append("\"");
+                    msg.append(player->getName()).append(" drew \"").append(card.getDesciption()).append("\"");
                     commandLog(s, msg);
                     sendToAllLivePlayer(this->gameboard, s);
                     cout << player->getName() << "抽到 \"" << card.getDesciption() << "\"\n";
@@ -560,7 +560,7 @@ class Field {   // 格子
                         player->tryEscapeJail();
                     } else {
                         string s = "", msg = "";
-                        msg.append(player->getName()).append(" just passed by.");
+                        msg.append(player->getName()).append(" is just passing by.");
                         commandLog(s, msg);
                         sendToAllLivePlayer(this->gameboard, s);
                         cout << player->getName() << " 只是經過\n";
@@ -796,7 +796,7 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
                     int fd = this->survivors->at(i)->getSockfd();
                     if (FD_ISSET(fd, &rset)) {
                         if (this->survivors->at(i) == this->getTurnPlayer()) {
-                            int n = Readline(fd, buf, MAXLINE);
+                            int n = Read(fd, buf, MAXLINE);
                             buf[n] = '\0';
                             if (n <= 0) {
                                 this->playerLeave(this->survivors->at(i)->getId());
@@ -804,7 +804,8 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
                             } 
                             return n;
                         } else {
-                            int n = Readline(fd, buf, MAXLINE);
+                            int n = Read(fd, buf, MAXLINE);
+                            buf[n] = '\0';
                             if (n <= 0) {
                                 if (errno == EINTR) {
                                     this->playerTimeout(this->getTurnPlayerNum());
@@ -905,12 +906,12 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
                         if (n > 0) {
                             this->fields[i].demolish(n);
                             char buf[MAXLINE];
-                            sprintf(buf, "log Earthquake at %s, all houses was destroyed./\n", this->fields[i].getName().c_str());
+                            sprintf(buf, "log Earthquake struck %s, all houses were destroyed./\n", this->fields[i].getName().c_str());
                             sendToAllLivePlayer(this, buf);
                             cout << this->fields[i].getName() << " 發生地震，所有房屋都被震毀了\n";
                         } else {
                             char buf[MAXLINE];
-                            sprintf(buf, "log Earthquake at %s, but no house destroyed./\n", this->fields[i].getName().c_str());
+                            sprintf(buf, "log Earthquake struck %s, but no houses were destroyed./\n", this->fields[i].getName().c_str());
                             sendToAllLivePlayer(this, buf);
                             cout << this->fields[i].getName() << " 發生地震，所幸沒有房屋被震毀\n";
                         }
@@ -1115,7 +1116,7 @@ void Player::pay(int n) {
 void Player::declareBankrupt() {
     this->gameboard->setBankrupt(this->id);
     string s = "", msg = "";
-    msg.append(this->name).append(" bankrupted.");
+    msg.append(this->name).append(" has gone bankrupt.");
     commandLog(s, msg);
     sendToAllLivePlayer(this->gameboard, s);
     cout << this->name << " 破產了\n";
@@ -1324,7 +1325,7 @@ void Player::demolishRandHouse() {
             cout << f[r]->getName() << " 的房屋被拆除了\n";
         }
     } else {
-        string s = "", msg = "There is no house being demolished.";
+        string s = "", msg = "There were no houses that were demolished.";
         commandLog(s, msg);
         sendToAllLivePlayer(this->gameboard, s);
         cout << "沒有任何房屋被拆除\n";
@@ -1620,7 +1621,7 @@ void Card::execute(Player *player) {
 void Field::checkBuy(Player *player) {
             if (player->getMoney() >= this->rentInfo.cost) {
                 string s = "", msg = "";
-                msg.append("Do you want to by ").append(this->name).append(" ($").append(to_string(this->rentInfo.cost)).append(")?");
+                msg.append("Do you want to buy ").append(this->name).append(" ($").append(to_string(this->rentInfo.cost)).append(")?");
                 commandAskToBuy(s);
                 commandLog(s, msg);
                 sendToUser(player->getSockfd(), s);
@@ -1641,7 +1642,7 @@ void Field::checkBuy(Player *player) {
                     sendToUser(player->getSockfd(), s);
                     s = "";
                     msg = "";
-                    msg.append(player->getName()).append(" buyed ").append(this->name).append(".");
+                    msg.append(player->getName()).append(" bought ").append(this->name).append(".");
                     commandOwnProp(s, player->getId(), this->index);
                     commandLog(s, msg);
                     sendToAllLivePlayer(this->gameboard, s);
@@ -1670,7 +1671,7 @@ void Field::checkBuy(Player *player) {
                     } else if ((strcmp(buf, "YES\n") == 0) || (strcmp(buf, "YES") == 0)) {
                         player->pay(this->rentInfo.houseCost);
                         this->house++;
-                        sprintf(buf, "build %d/log %s build a %s on %s./\n", this->index, player->getName().c_str(), ((this->house == 4) ? "hotel" : "house"), this->name.c_str());
+                        sprintf(buf, "build %d/log %s built a %s on %s./\n", this->index, player->getName().c_str(), ((this->house == 4) ? "hotel" : "house"), this->name.c_str());
                         sendToAllLivePlayer(this->gameboard, buf);
                         cout << player->getName() << " 在 " << this->name << ((this->house == 5) ? " 蓋了旅館\n" : " 蓋了房子\n");
                     }
@@ -1689,7 +1690,7 @@ void Player::tryEscapeJail() {
             if (this->inJail >= 3) {
                 this->inJail = 0;
                 string s = "", msg = "";
-                msg.append(this->name).append(" was released from the jail.");
+                msg.append(this->name).append(" was released from jail.");
                 commandLog(s, msg);
                 cout << this->name << " 從監獄中被釋放了\n";
                 sendToAllLivePlayer(this->gameboard, s);
@@ -1719,13 +1720,13 @@ void Player::tryEscapeJail() {
                 if (dice.d1 == dice.d2) {
                     this->inJail = 0;
                     this->lastMove = dice;
-                    msg.append(this->name).append(" was released from the jail.");
+                    msg.append(this->name).append(" was released from jail.");
                     commandLog(s, msg);
                     sendToAllLivePlayer(this->gameboard, s);
                 } else {
                     cout << this->name << " 逃獄失敗，剩餘 " << 3 - this->inJail << " 回合\n";
                     string s = "", msg = "";
-                    msg.append(this->name).append(" failed to escape, ").append(to_string(3 - this->inJail)).append(" turns left.");
+                    msg.append(this->name).append(" failed to escape from jail, ").append(to_string(3 - this->inJail)).append(" rounds left.");
                     commandLog(s, msg);
                     sendToAllLivePlayer(this->gameboard, s);
                     this->inJail++;
@@ -1818,7 +1819,7 @@ void game(WaitingRoom *room) {
     Signal(SIGALRM, sig_alrm);
     while (true) {
         alarm(60);
-        cout << "\n\n\n\n- - - - - - - - - - - - - Turn " << turnNum++ << " - - - - - - - - - - - - -\n\n";
+        cout << "\n\n\n\n- - - - - - - - - - - - - Round " << turnNum++ << " - - - - - - - - - - - - -\n\n";
         board.nextTurn();
         if (board.isTurnPlayerBankrupt()) goto TurnEnd;
         if (board.getTurnPlayer()->isInJail()) {
@@ -2005,4 +2006,5 @@ int main(int argc, char **argv)
         }    
     }
 }
+
 
