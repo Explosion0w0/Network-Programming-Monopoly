@@ -24,7 +24,8 @@ using namespace std;
 string boardImageSrc = "../assets/board.jpg",
     playerImageSrc[8] = {"../assets/01.png", "../assets/02.png", "../assets/03.png", "../assets/04.png", "../assets/05.png", "../assets/06.png", "../assets/07.png", "../assets/08.png"},
     propertyImageSrc[8] = {"../assets/house00.png", "../assets/house01.png", "../assets/house02.png", "../assets/house03.png", "../assets/house04.png", "../assets/hotel.png"},
-    vertPropertyImageSrc[6] = {"../assets/house00vertical.png", "../assets/house01vertical.png", "../assets/house02vertical.png", "../assets/house03vertical.png", "../assets/house04vertical.png", "../assets/hotelvertical.png"};
+    vertPropertyImageSrc[6] = {"../assets/house00vertical.png", "../assets/house01vertical.png", "../assets/house02vertical.png", "../assets/house03vertical.png", "../assets/house04vertical.png", "../assets/hotelvertical.png"},
+    diceImageSrc[6] = {"../assets/d1.png", "../assets/d2.png", "../assets/d3.png", "../assets/d4.png", "../assets/d5.png", "../assets/d6.png"};
 
 vector<string> eventPrefixes = {"move ", "build ", "log ", "balance ", "roll", "moveto ", "addprop ", "remprop ", "asktobuy", "asktosell", "isfirst", "setplayers ", "remplayer ", "ownprop ", "unownprop ", "win"};
 
@@ -188,7 +189,7 @@ protected:
     wxButton *buttonDontBuy;
     wxButton *buttonSell;
     wxButton *buttonStart;
-    wxStaticBitmap *imageCtrl, *imgPlayers[8], *imgProperty[40], *imgWin;
+    wxStaticBitmap *imageCtrl, *imgPlayers[8], *imgProperty[40], *imgWin, *imgDice[2];
     wxTimer *timer;
     wxTextCtrl *textDisplay, *balanceDisplay;
     wxControl *ownLabel[40];
@@ -431,7 +432,7 @@ wxThread::ExitCode MyThread::Entry()
                             case 4: //roll
                             {
                                 wxCommandEvent evt(wxEVT_THREAD_ROLL, wxID_ANY);
-                                // evt.SetString(argument);
+                                evt.SetString(argument);
 
                                 m_pHandler->GetEventHandler()->AddPendingEvent(evt); 
 
@@ -632,14 +633,13 @@ void MyFrame::modifyBalance(wxCommandEvent& event)
 
 void MyFrame::roll(wxCommandEvent& event)
 {
-    // string argument = event.GetString().ToStdString();
-    // istringstream iss(argument);
+    string argument = event.GetString().ToStdString();
+    istringstream iss(argument);
 
-    // if (iss >> pendingRoll1 >> pendingRoll2) 
-    //     buttonDice->Show(true); 
-    // else 
-    //     wxMessageOutputDebug().Printf("input: %s", "ERROR: Invalid roll command argument: " + argument);
-    buttonDice->Show(true);
+    if (iss >> pendingRoll1 >> pendingRoll2) 
+        buttonDice->Show(true); 
+    else 
+        wxMessageOutputDebug().Printf("input: %s", "ERROR: Invalid roll command argument: " + argument);
 }
 
 void MyFrame::moveTo(wxCommandEvent& event)
@@ -817,7 +817,9 @@ MyFrame::MyFrame(const wxString& title, const wxPoint& pos, const wxSize& size, 
         if(i % 10 != 0)
             ownLabel[i] = new wxControl(panel, wxID_ANY, coords[i] + ownLabelOffset[i / 10], ((i / 10) % 2 == 0 ? wxSize(62, 8) : wxSize(8, 62)));
     }
-
+    wxBitmap emptyBitmap(1, 1);
+    imgDice[0] = new wxStaticBitmap(panel, wxID_ANY, emptyBitmap, wxPoint(365, 550));
+    imgDice[1] = new wxStaticBitmap(panel, wxID_ANY, emptyBitmap, wxPoint(465, 650));
 
     playerNames[0] = new wxStaticText(panel, wxID_ANY, "", wxPoint(215, 185), wxSize(100, 20));
     playerNames[1] = new wxStaticText(panel, wxID_ANY, "", wxPoint(215, 210), wxSize(100, 20));
@@ -871,6 +873,11 @@ void MyFrame::OnClose(wxCloseEvent&)
 void MyFrame::OnButtonDiceClick(wxCommandEvent& event) 
 {
     buttonDice->Show(false);
+    wxBitmap bmp1(diceImageSrc[pendingRoll1 - 1], wxBITMAP_TYPE_PNG), 
+            bmp2(diceImageSrc[pendingRoll2 - 1], wxBITMAP_TYPE_PNG);
+
+    imgDice[0]->SetBitmap(bmp1);
+    imgDice[1]->SetBitmap(bmp2);
 
     Writen(sockfd, const_cast<char*>("OK\n"), 4);
 }
