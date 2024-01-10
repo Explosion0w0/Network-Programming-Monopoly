@@ -313,6 +313,7 @@ struct Dice {
 };
 
 Dice roll() {
+    srand(time(0));
     int d1, d2;
     d1 = rand();
     d2 = rand();
@@ -1629,7 +1630,7 @@ void Field::checkBuy(Player *player) {
                 char buf[MAXLINE];
                 //this->getUserInput(buf);
                 this->gameboard->waitForTPInput(buf);
-                cout << "BUF" << buf << strlen(buf) << "\n";
+                cout << "BUF " << buf << strlen(buf) << "\n";
                 if ((strcmp(buf, "NO\n") == 0) || (strcmp(buf, "NO") == 0)) {
                     return;
                 } else if ((strcmp(buf, "YES\n") == 0) || (strcmp(buf, "YES") == 0)) {
@@ -1999,8 +2000,7 @@ int main(int argc, char **argv)
                         exit(0);
                     }
                     wait(0);
-                    room = WaitingRoom();
-                    pNum = 0;
+                    return 0;
                 }
             }
         }    
