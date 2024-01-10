@@ -1053,14 +1053,14 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
             this->setField(6, 2, "Penghu County", 1, {100,6,30,90,270,400,550,50});
             this->setField(7, 5, "CHANCE");
             this->setField(8, 2, "Kinmen County", 1, {100,6,30,90,270,400,550,50});
-            this->setField(9, 2, "Lianjian County", 1, {120,8,40,100,300,450,600,50});
+            this->setField(9, 2, "Lianjiang County", 1, {120,8,40,100,300,450,600,50});
             this->setField(10, 8, "JAIL");
             this->setField(11, 2, "Taitung County", 2, {140,10,50,150,450,625,750,100});
             this->setField(12, 4, "Taiwan Power Company", 0, {150,4,10,0,0,0,0,0});
             this->setField(13, 2, "Hualien County", 2, {140,10,50,150,450,625,750,100});
             this->setField(14, 2, "Yilan County", 2, {160,12,60,180,500,700,900,100});
             this->setField(15, 3, "Tainan Train Station", 0, {200,25,50,100,200,0,0,0});
-            this->setField(16, 2, "Pingtun County", 3, {180,14,70,200,550,750,950,100});
+            this->setField(16, 2, "Pingtung County", 3, {180,14,70,200,550,750,950,100});
             this->setField(17, 6, "DESTINY");
             this->setField(18, 2, "Kaohsiung City", 3, {180,14,70,200,550,750,950,100});
             this->setField(19, 2, "Tainan City", 3, {200,16,80,220,600,800,1000,100});
