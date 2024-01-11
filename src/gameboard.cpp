@@ -34,8 +34,7 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
 */
 
 
-
-static void sig_alrm(int signo) {
+void sig_alrm(int signo) {
     return;
 }
 
@@ -48,6 +47,7 @@ void sig_chld(int signo)
 	printf("child %d terminated\n", pid);
 	return;
 }
+
 
 class Gameboard;
 class Player;
@@ -799,6 +799,7 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
                 maxfd++;
                 int nReady = select(maxfd, &rset, NULL, NULL, NULL);
                 if (nReady <= 0) {
+                    cout << "select 0\n";
                     if (errno == EINTR) {
                         this->playerTimeout(this->getTurnPlayerNum());
                         return 0;
@@ -1827,8 +1828,9 @@ void game(WaitingRoom *room) {
     
     int turnNum = 1;
     Signal(SIGALRM, sig_alrm);
+    Signal(SIGCHLD, sig_chld);
     while (true) {
-        alarm(60);
+        alarm(30);
         cout << "\n\n\n\n- - - - - - - - - - - - - Round " << turnNum++ << " - - - - - - - - - - - - -\n\n";
         board.nextTurn();
         if (board.isTurnPlayerBankrupt()) goto TurnEnd;
@@ -1915,7 +1917,7 @@ int main(int argc, char **argv)
 	pid_t				childpid;
 	struct sockaddr_in	servaddr, cliaddr; //cliaddr1, cliaddr2, servaddr;
 	socklen_t			clilen;
-	void				sig_chld(int);
+	//void				sig_chld(int);
     fd_set				rset;
 
 	listenfd = Socket(AF_INET, SOCK_STREAM, 0);
@@ -2013,7 +2015,7 @@ int main(int argc, char **argv)
                         unsigned int seed;
                         seed = (unsigned int)time(NULL);
                         srand(seed);
-                        srand(42); // for test
+                        //srand(42); // for test
                         WaitingRoom r = room;
                         int n = r.playerNum;
                         game(&r);

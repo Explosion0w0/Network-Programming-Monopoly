@@ -141,7 +141,8 @@ enum
     ID_BUTTONSHOWP26 = 33,
     ID_BUTTONSHOWP27 = 34,
     ID_BUTTONSHOWP28 = 35,
-    ID_PROPSHOW = 36
+    ID_PROPSHOW = 36,
+    ID_BUTTONEXIT = 37
 };
 
 wxDECLARE_EVENT(wxEVT_THREAD_COMPLETE, wxCommandEvent);
@@ -224,6 +225,7 @@ protected:
     wxButton *buttonDontBuy;
     wxButton *buttonSell;
     wxButton *buttonStart;
+    wxButton *buttonExit;
     wxBitmapButton *buttonShowP[28];
     wxStaticBitmap *imageCtrl, *imgPlayers[8], *imgProperty[40], *imgWin, *imgDice[2];
     wxTimer *timer;
@@ -266,6 +268,7 @@ protected:
     void OnButtonShowP26Click(wxCommandEvent& event);
     void OnButtonShowP27Click(wxCommandEvent& event);
     void OnButtonShowP28Click(wxCommandEvent& event);
+    void OnButtonExitClick(wxCommandEvent& event);
 
     int sockfd, playerLocations[8], propertyState[40], balance,
         pendingRoll1, pendingRoll2;
@@ -307,6 +310,7 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_BUTTON(ID_BUTTONSHOWP26, MyFrame::OnButtonShowP26Click)
     EVT_BUTTON(ID_BUTTONSHOWP27, MyFrame::OnButtonShowP27Click)
     EVT_BUTTON(ID_BUTTONSHOWP28, MyFrame::OnButtonShowP28Click)
+    EVT_BUTTON(ID_BUTTONEXIT, MyFrame::OnButtonExitClick)
     EVT_CLOSE(MyFrame::OnClose)
     EVT_COMMAND(wxID_ANY, wxEVT_THREAD_LOG, MyFrame::logAction)
     EVT_COMMAND(wxID_ANY, wxEVT_THREAD_COMPLETE, MyFrame::OnThreadCompletion)
@@ -929,12 +933,14 @@ MyFrame::MyFrame(const wxString& title, const wxPoint& pos, const wxSize& size, 
     buttonSell = new wxButton(panel, ID_BUTTONSELL, "Sell", wxPoint(950, 800), wxSize(150, 50));
     propShow = new wxHtmlWindow(panel, ID_PROPSHOW, wxPoint(450, 250), wxSize(240, 400));
     buttonStart = new wxButton(panel, ID_BUTTONSTART, "START GAME", wxPoint(350, 350), wxSize(200, 200));
+    buttonExit = new wxButton(panel, ID_BUTTONEXIT, "Exit", wxPoint(1400, 800), wxSize(100, 50));
 
     buttonDice->Show(false);
     buttonBuy->Show(false);
     buttonDontBuy->Show(false);
     buttonSell->Show(false);
     buttonStart->Show(false);
+    buttonExit->Show(false);
 
 
     buttonShowP[0] = new wxBitmapButton(panel, ID_BUTTONSHOWP1, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(708, 778), wxSize(75, 122));
@@ -1050,6 +1056,11 @@ void MyFrame::OnButtonStartClick(wxCommandEvent& event)
 {
     buttonStart->Show(false);
     Writen(sockfd, const_cast<char*>("START\n"), 7);
+}
+
+void MyFrame::OnButtonExitClick(wxCommandEvent& event) 
+{
+    //Close(sockfd);
 }
 
 string MyFrame::generateHTML(string name, int price, int empty, int h1, int h2, int h3, int h4, int hotel, int upgrade)
