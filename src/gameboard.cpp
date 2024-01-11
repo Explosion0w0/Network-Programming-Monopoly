@@ -799,7 +799,7 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
                 maxfd++;
                 int nReady = select(maxfd, &rset, NULL, NULL, NULL);
                 if (nReady <= 0) {
-                    cout << "select 0\n";
+                    //cout << "select 0\n";
                     if (errno == EINTR) {
                         this->playerTimeout(this->getTurnPlayerNum());
                         return 0;
@@ -813,13 +813,20 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
                                 buf[n] = '\0';
                                 if (n <= 0) {
                                     this->playerLeave(this->survivors->at(i)->getId());
-                                    return n;
-                                } 
+                                    return 0;
+                                } else if ((strcmp(buf, "EXIT") == 0) || (strcmp(buf, "EXIT\n") == 0)) {
+                                    cout << "TP EXIT\n";
+                                    this->playerLeave(this->survivors->at(i)->getId());
+                                    return 0;
+                                }
                                 return n;
                             } else {
                                 int n = Read(fd, buf, MAXLINE);
                                 buf[n] = '\0';
                                 if (n <= 0) {
+                                    this->playerLeave(this->survivors->at(i)->getId());
+                                } else if ((strcmp(buf, "EXIT") == 0) || (strcmp(buf, "EXIT\n") == 0)) {
+                                    cout << "NONE TP EXIT\n";
                                     this->playerLeave(this->survivors->at(i)->getId());
                                 }
                             }
@@ -1853,6 +1860,8 @@ void game(WaitingRoom *room) {
             if (board.waitForTPInput(buf) <= 0) {
                 goto TurnEnd;
             }
+            if (board.isTurnPlayerBankrupt()) goto TurnEnd;
+
             cout << "Roll cli return:\t" << buf << "\n";
             //if ((strcmp(buf, "OK") == 0) || (strcmp(buf, "OK\n") == 0)) {
             //    cout << "roll\n";
@@ -1875,6 +1884,7 @@ void game(WaitingRoom *room) {
         //char buf[MAXLINE];
         //board.waitForTPInput(buf);
 TurnEnd:
+        cout << "T END\n";
         alarm(0);
         board.checkEnd();
         if ((board.isEnded())) {

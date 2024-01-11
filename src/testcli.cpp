@@ -940,7 +940,7 @@ MyFrame::MyFrame(const wxString& title, const wxPoint& pos, const wxSize& size, 
     buttonDontBuy->Show(false);
     buttonSell->Show(false);
     buttonStart->Show(false);
-    buttonExit->Show(false);
+    //buttonExit->Show(false);
 
 
     buttonShowP[0] = new wxBitmapButton(panel, ID_BUTTONSHOWP1, wxBitmap(1, 1, wxBITMAP_SCREEN_DEPTH), wxPoint(708, 778), wxSize(75, 122));
@@ -1060,7 +1060,7 @@ void MyFrame::OnButtonStartClick(wxCommandEvent& event)
 
 void MyFrame::OnButtonExitClick(wxCommandEvent& event) 
 {
-    //Close(sockfd);
+    Writen(sockfd, const_cast<char*>("EXIT\n"), 6);
 }
 
 string MyFrame::generateHTML(string name, int price, int empty, int h1, int h2, int h3, int h4, int hotel, int upgrade)
