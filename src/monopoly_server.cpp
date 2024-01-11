@@ -824,8 +824,8 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
                                     this->playerLeave(this->survivors->at(i)->getId());
                                     return 0;
                                 } else if ((strcmp(buf, "EXIT") == 0) || (strcmp(buf, "EXIT\n") == 0)) {
-                                    cout << "TP EXIT\n";
                                     this->playerLeave(this->survivors->at(i)->getId());
+                                    cout << "TP EXIT\n";
                                     return 0;
                                 }
                                 return n;
@@ -856,7 +856,7 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
             sendToAllLivePlayer(this, s);
             for (int i = 0; i < (int)(this->survivors->size()); i++) {
                 if (this->survivors->at(i) == &(this->players[id])) {
-                    for (int j = i; j < (int)(this->survivors->size()-1); j++) {
+                    for (int j = i; j < (int)(this->survivors->size()-2); j++) {
                         this->survivors[j] = this->survivors[j+1];
                     }
                     this->survivors->pop_back();
@@ -962,19 +962,23 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
             this->setBankrupt(id);
         }
         void turnPlayerLeave() {
+            cout << "check point 1\n";
             this->setBankrupt(this->turnPlayer);
             string s = "", msg = "";
             msg.append(this->getTurnPlayer()->getName()).append(" left the game.");
             commandLog(s, msg);
             sendToAllLivePlayer(this, s);
+            cout << "check point 2\n";
             cout << this->getTurnPlayer()->getName() << " 已離開遊戲\n";
         }
         void playerLeave(int id) {
+            cout << "check point 3\n";
             this->setBankrupt(id);
             string s = "", msg = "";
             msg.append(this->getTurnPlayer()->getName()).append(" left the game.");
             commandLog(s, msg);
             sendToAllLivePlayer(this, s);
+            cout << "check point 4\n";
             cout << this->players[id].getName() << " 已離開遊戲\n";
         }
         int getUserInput(char *buf);
@@ -1866,7 +1870,10 @@ void game(WaitingRoom *room) {
             commandRoll(s, dice.d1, dice.d2);
             sendToUser(board.getTurnPlayer()->getSockfd(), s);
             char buf[MAXLINE];
-            if (board.waitForTPInput(buf) <= 0) {
+            int a = board.waitForTPInput(buf);
+            cout << a << "\n";
+            if (a <= 0) {
+                cout << "goto\n";
                 goto TurnEnd;
             }
             if (board.isTurnPlayerBankrupt()) goto TurnEnd;
