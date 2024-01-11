@@ -928,20 +928,21 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
             }
         }
         void turnPlayerTimeout() {
-            this->setBankrupt(this->turnPlayer);
             string s = "", msg = "";
             msg.append(this->getTurnPlayer()->getName()).append(" timeout, regarded as bankrupt.");
             commandLog(s, msg);
             sendToAllLivePlayer(this, s);
+            
+            this->setBankrupt(this->turnPlayer);
             cout << this->getTurnPlayer()->getName() << " 超時，已宣告破產\n";
         }
         void playerTimeout(int id) {
-            this->setBankrupt(id);
             string s = "", msg = "";
             msg.append(this->getTurnPlayer()->getName()).append(" timeout, regarded as bankrupt.");
             commandLog(s, msg);
             sendToAllLivePlayer(this, s);
             cout << this->players[id].getName() << " 超時，已宣告破產\n";
+            this->setBankrupt(id);
         }
         void turnPlayerLeave() {
             this->setBankrupt(this->turnPlayer);
@@ -1823,9 +1824,6 @@ void game(WaitingRoom *room) {
     string s = "";
     commandSetPlayers(s, &board);
     sendToAllLivePlayer(&board, s);
-    //int maxfdp1;
-    fd_set rset;
-    FD_ZERO(&rset);
     
     int turnNum = 1;
     Signal(SIGALRM, sig_alrm);
@@ -1934,10 +1932,10 @@ int main(int argc, char **argv)
     int pNum = 0;
     WaitingRoom room = WaitingRoom();
 
-    if (!pNum) {
+    for (;;) {
         if ( (connfd = accept(listenfd, (SA *) &cliaddr, &clilen)) < 0) {
-            if (errno == EINTR);
-                //continue;		/* back to for() */
+            if (errno == EINTR)
+                continue;
             else
                 err_sys("accept error");
         } else {
@@ -1969,8 +1967,8 @@ int main(int argc, char **argv)
                 clilen = sizeof(cliaddr);
                 bzero(&connfd, sizeof(connfd));
                 if ( (connfd = accept(listenfd, (SA *) &cliaddr, &clilen)) < 0) {
-                    if (errno == EINTR);
-                        //continue;		
+                    if (errno == EINTR)
+                        continue;		
                     else
                         err_sys("accept error");
                 } 
@@ -2005,14 +2003,16 @@ int main(int argc, char **argv)
                         Close(room.sockfds[i]);
                     }
                     cout << "Disconnect\n";
-                    return 0;
+                    break;
                 }
                 recvline[n-1] = '\0';
                 if (strcmp(recvline, "START") == 0){
-
                     if ((childpid = Fork()) == 0) {    
-                        Close(listenfd);	
+                        Close(listenfd);
                         fputs("game start\n", stdout);
+                        unsigned int seed;
+                        seed = (unsigned int)time(NULL);
+                        srand(seed);
                         srand(42); // for test
                         WaitingRoom r = room;
                         int n = r.playerNum;
@@ -2023,12 +2023,36 @@ int main(int argc, char **argv)
                         exit(0);
                     }
                     wait(0);
-                    Close(listenfd);
-                    return 0;
+                    break;
                 }
+                pNum = 0;
+                room = WaitingRoom();
             }
-        }    
-    }
+            if (pNum == 8) {
+                if ((childpid = Fork()) == 0) {    
+                        Close(listenfd);
+                        fputs("game start\n", stdout);
+                        unsigned int seed;
+                        seed = (unsigned int)time(NULL);
+                        srand(seed);
+                        srand(42); // for test
+                        WaitingRoom r = room;
+                        int n = r.playerNum;
+                        game(&r);
+                        for (int i = 0; i < n; i++){
+                            Close(r.sockfds[i]);
+                        }
+                        exit(0);
+                    }
+                    wait(0);
+                    pNum = 0;
+                    room = WaitingRoom();   
+                    break;
+            }
+        } 
+        pNum = 0;
+        room = WaitingRoom();   
+    }   
 }
 
 
