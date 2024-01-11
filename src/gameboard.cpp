@@ -729,7 +729,16 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
         int getTurnPlayerNum() {
             return this->turnPlayer;
         }
-        int isEnded() const {
+        int isEnded() {
+            int livePlayer = 0;
+            for (int i = 0; i < this->playerNum; i++) {
+                if (this->bankruptStat[i] == 0) {
+                    livePlayer++;
+                }
+            }
+            if (livePlayer <= 1) {
+                this->end = 1;
+            }
             return this->end;
         }
         void nextTurn() {
@@ -1893,6 +1902,7 @@ TurnEnd:
     }
 
     if ((board.isEnded())) {
+        cout << "IS END\n";
         int id = board.winner();
         if (id != -1) {
             string win = "win/\n";
