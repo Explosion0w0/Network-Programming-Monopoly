@@ -1,6 +1,6 @@
 include ./Make.defines
 
-PROGS = gameboard testcli gameboard.o # testcli testserv
+PROGS = gameboard testcli gameboard.o testserv
 
 all:	${PROGS}
 
@@ -18,8 +18,8 @@ testcli:	testcli.cpp
 #testcli:	testcli.c
 #		${CC} ${CFLAGS} testcli.c -o ../bin/testcli ${LIBS}
 
-#testserv:	testserv.cpp
-#		g++ ${CFLAGS} testserv.cpp -o ../bin/testserv ${LIBS}
+testserv:	testserv.cpp
+		g++ ${CFLAGS} testserv.cpp -o ../bin/testserv ${LIBS}
 
 
 clean:

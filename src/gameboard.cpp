@@ -475,10 +475,15 @@ class Field {   // 格子
                 // 0:Empty 1:起點 2:土地 3:車站 4:公共事業 5:機會 6:命運 7:入獄 8:監獄 9:稅
                 case 1:
                     if (player->getPassedStart()) {
+                        /*
                         player->earn(200);
                         cout << player->getName() << " 經過起點, 獲得$200\n";
-                        string s = "", msg = "";
                         msg.append(player->getName()).append(" passed START and earned $200.");
+                        */
+                        player->pay(100);
+                        cout << player->getName() << " 經過起點, 繳保護費$100\n";
+                        string s = "", msg = "";
+                        msg.append(player->getName()).append(" passed START and paid $100.");
                         commandLog(s, msg);
                         sendToAllLivePlayer(this->gameboard, s);
                         player->resetPassedStart();
@@ -781,7 +786,7 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
         int waitForTPInput(char *buf) {
             fd_set rset;
             FD_ZERO(&rset);
-            timeval tv = {300,0};
+            //timeval tv = {300,0};
             for (;;) {
                 int maxfd = 0;
                 for(int i = 0; i < (int)(this->survivors->size()); i++) {
@@ -792,26 +797,28 @@ class Gameboard {   // 遊戲盤 aka 整個遊戲（包括銀行、玩家、場�
                     } 
                 }
                 maxfd++;
-                Select(maxfd, &rset, NULL, NULL, &tv);
-                for(int i = 0; i < (int)(this->survivors->size()); i++) {
-                    int fd = this->survivors->at(i)->getSockfd();
-                    if (FD_ISSET(fd, &rset)) {
-                        if (this->survivors->at(i) == this->getTurnPlayer()) {
-                            int n = Read(fd, buf, MAXLINE);
-                            buf[n] = '\0';
-                            if (n <= 0) {
-                                this->playerLeave(this->survivors->at(i)->getId());
+                int nReady = select(maxfd, &rset, NULL, NULL, NULL);
+                if (nReady <= 0) {
+                    if (errno == EINTR) {
+                        this->playerTimeout(this->getTurnPlayerNum());
+                        return 0;
+                    }
+                } else {
+                    for(int i = 0; i < (int)(this->survivors->size()); i++) {
+                        int fd = this->survivors->at(i)->getSockfd();
+                        if (FD_ISSET(fd, &rset)) {
+                            if (this->survivors->at(i) == this->getTurnPlayer()) {
+                                int n = Read(fd, buf, MAXLINE);
+                                buf[n] = '\0';
+                                if (n <= 0) {
+                                    this->playerLeave(this->survivors->at(i)->getId());
+                                    return n;
+                                } 
                                 return n;
-                            } 
-                            return n;
-                        } else {
-                            int n = Read(fd, buf, MAXLINE);
-                            buf[n] = '\0';
-                            if (n <= 0) {
-                                if (errno == EINTR) {
-                                    this->playerTimeout(this->getTurnPlayerNum());
-                                    return 0;
-                                } else {
+                            } else {
+                                int n = Read(fd, buf, MAXLINE);
+                                buf[n] = '\0';
+                                if (n <= 0) {
                                     this->playerLeave(this->survivors->at(i)->getId());
                                 }
                             }
@@ -1629,8 +1636,10 @@ void Field::checkBuy(Player *player) {
                 //cout << "是否購買 " << this->name << " (" << this->rentInfo.cost << "$) ? 0:no 1:yes\n";
                 char buf[MAXLINE];
                 //this->getUserInput(buf);
-                this->gameboard->waitForTPInput(buf);
-                cout << "BUF " << buf << strlen(buf) << "\n";
+                if (this->gameboard->waitForTPInput(buf) <= 0) {
+                    return;
+                }
+                cout << "checkBuy recv:\t" << buf << "\n";
                 if ((strcmp(buf, "NO\n") == 0) || (strcmp(buf, "NO") == 0)) {
                     return;
                 } else if ((strcmp(buf, "YES\n") == 0) || (strcmp(buf, "YES") == 0)) {
@@ -1665,8 +1674,10 @@ void Field::checkBuy(Player *player) {
                     sendToUser(player->getSockfd(), buf);
                     //cout << "是否在 " << this->name << ((this->house == 4) ? " 蓋旅館 (" : " 蓋房子 (") << this->rentInfo.houseCost << "$) ? 0:no 1:yes\n";
                     //this->getUserInput(buf);
-                    this->gameboard->waitForTPInput(buf);
-                    cout << buf << "|" << strlen(buf) << "\n";
+                    if (this->gameboard->waitForTPInput(buf) <= 0) {
+                        return;
+                    }
+                    cout << "checkBuildHouse recv:\t" << buf << "\n";
                     if ((strcmp(buf, "NO\n") == 0) || (strcmp(buf, "NO") == 0)) {
                         return;
                     } else if ((strcmp(buf, "YES\n") == 0) || (strcmp(buf, "YES") == 0)) {
@@ -1703,7 +1714,7 @@ void Player::tryEscapeJail() {
                 if (this->gameboard->waitForTPInput(buf) <= 0) {
                     return;
                 }
-                cout << buf << "|" << strlen(buf) << "\n";
+                cout << "Roll cli return:\t" << buf << "\n";
             } else {
                 Dice dice = roll();
                 string s = "", msg = "";
@@ -1713,7 +1724,7 @@ void Player::tryEscapeJail() {
                 if (this->gameboard->waitForTPInput(buf) <= 0) {
                     return;
                 }
-                cout << buf << "|" << strlen(buf) << "\n";
+                cout << "Roll cli return:\t" << buf << "\n";
                 msg.append(this->name).append(" rolled ").append(to_string(dice.d1)).append(" and ").append(to_string(dice.d2)).append(".");
                 s = "";
                 commandLog(s, msg);
@@ -1735,7 +1746,7 @@ void Player::tryEscapeJail() {
                 
             }
         }
-
+/*
 int Player::getUserInput(char *buf) {
     sleep_for(seconds(1));
     int n = Readline(this->sockfd, buf, MAXLINE); //scanf("%d", &input);
@@ -1778,7 +1789,7 @@ int Gameboard::getUserInput(char *buf) {
     }
     return n;
 }
-
+*/
 void sendToAllLivePlayer(Gameboard *board, char *str) {
     vector<Player*> *v = board->getSurvivors();
     for (int i = 0; i < (int)(v->size()); i++) {
@@ -1839,11 +1850,13 @@ void game(WaitingRoom *room) {
             commandRoll(s, dice.d1, dice.d2);
             sendToUser(board.getTurnPlayer()->getSockfd(), s);
             char buf[MAXLINE];
-            board.waitForTPInput(buf);
-            cout << buf << "|" << strlen(buf) << "\n";
-            if ((strcmp(buf, "OK") == 0) || (strcmp(buf, "OK\n") == 0)) {
-                cout << "roll\n";
+            if (board.waitForTPInput(buf) <= 0) {
+                goto TurnEnd;
             }
+            cout << "Roll cli return:\t" << buf << "\n";
+            //if ((strcmp(buf, "OK") == 0) || (strcmp(buf, "OK\n") == 0)) {
+            //    cout << "roll\n";
+            //}
             s = "";
             msg.append(board.getTurnPlayer()->getName()).append(" rolled ").append(to_string(dice.d1)).append(" and ").append(to_string(dice.d2)).append(".");
             commandLog(s, msg);

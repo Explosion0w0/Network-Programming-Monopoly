@@ -211,6 +211,8 @@ public:
     void win(wxCommandEvent& event);
 
     string generateHTML(string name, int price, int empty, int h1, int h2, int h3, int h4, int hotel, int upgrade);
+    string generateTrainHTML(string name, int price, int empty, int h1, int h2, int h3, int h4, int hotel, int upgrade);
+    string generateUtilityHTML(string name, int price, int empty, int h1, int h2, int h3, int h4, int hotel, int upgrade);
 
     MyThread *m_pThread;
     wxCriticalSection m_pThreadCS;
@@ -1058,6 +1060,20 @@ string MyFrame::generateHTML(string name, int price, int empty, int h1, int h2, 
     "</td></tr><tr><td>4 Houses:</td><td>$" + to_string(h4) + "</td></tr><tr><td>Hotel:</td><td>$" + to_string(hotel) + 
     "</td></tr><tr><td>=======</td></tr><tr><td>Upgrade:</td><td>$" + to_string(upgrade) + "</td></tr></tbody></table></body></html>";
 }
+string MyFrame::generateTrainHTML(string name, int price, int empty, int h1, int h2, int h3, int h4, int hotel, int upgrade)
+{
+    return "<html><body><table><thead><tr><th colspan=\"2\">" + name + "</th></tr></thead><tbody><tr><td>Price:</td><td>$" + to_string(price) + 
+    "</td></tr><tr><td>=======</td></tr><tr><td>Rent:</td></tr><tr><td>1 Station:</td><td>$" + to_string(empty) + "</td></tr><tr><td>2 Stations:</td><td>$" + to_string(h1) + 
+    "</td></tr><tr><td>3 Stations:</td><td>$" + to_string(h2) + "</td></tr><tr><td>4 Stations:</td><td>$" + to_string(h3) + 
+    "</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>=======</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td></tr></tbody></table></body></html>";
+}
+
+string MyFrame::generateUtilityHTML(string name, int price, int empty, int h1, int h2, int h3, int h4, int hotel, int upgrade)
+{
+    return "<html><body><table><thead><tr><th colspan=\"2\">" + name + "</th></tr></thead><tbody><tr><td>Price:</td><td>$" + to_string(price) + 
+    "</td></tr><tr><td>=======</td></tr><tr><td>Rent:</td></tr><tr><td>1 Utility:</td><td>x" + to_string(empty) + "</td></tr><tr><td>2 Utilities:</td><td>x" + to_string(h1) + 
+    "</td></tr><tr><td>=======</td></tr><tr><td>The rent is the sum of points on dice times the amount shown above.</td></tr></tbody></table></body></html>";
+}
 
 void MyFrame::OnButtonShowP1Click(wxCommandEvent& event) 
 {
@@ -1071,7 +1087,7 @@ void MyFrame::OnButtonShowP2Click(wxCommandEvent& event)
 
 void MyFrame::OnButtonShowP3Click(wxCommandEvent& event) 
 {
-    propShow->SetPage(generateHTML("Taitung Train Station", 200,25,50,100,200,0,0,0));
+    propShow->SetPage(generateTrainHTML("Taitung Train Station", 200,25,50,100,200,0,0,0));
 }
 
 void MyFrame::OnButtonShowP4Click(wxCommandEvent& event) 
@@ -1096,7 +1112,7 @@ void MyFrame::OnButtonShowP7Click(wxCommandEvent& event)
 
 void MyFrame::OnButtonShowP8Click(wxCommandEvent& event) 
 {
-    propShow->SetPage(generateHTML("Taiwan Power Company", 150,4,10,0,0,0,0,0));
+    propShow->SetPage(generateUtilityHTML("Taiwan Power Company", 150,4,10,0,0,0,0,0));
 }
 
 void MyFrame::OnButtonShowP9Click(wxCommandEvent& event) 
@@ -1111,7 +1127,7 @@ void MyFrame::OnButtonShowP10Click(wxCommandEvent& event)
 
 void MyFrame::OnButtonShowP11Click(wxCommandEvent& event) 
 {
-    propShow->SetPage(generateHTML("Tainan Train Station", 200,25,50,100,200,0,0,0));
+    propShow->SetPage(generateTrainHTML("Tainan Train Station", 200,25,50,100,200,0,0,0));
 }
 
 void MyFrame::OnButtonShowP12Click(wxCommandEvent& event) 
@@ -1146,7 +1162,7 @@ void MyFrame::OnButtonShowP17Click(wxCommandEvent& event)
 
 void MyFrame::OnButtonShowP18Click(wxCommandEvent& event) 
 {
-    propShow->SetPage(generateHTML("Taichung Train Station", 200,25,50,100,200,0,0,0));
+    propShow->SetPage(generateTrainHTML("Taichung Train Station", 200,25,50,100,200,0,0,0));
 }
 
 void MyFrame::OnButtonShowP19Click(wxCommandEvent& event) 
@@ -1161,7 +1177,7 @@ void MyFrame::OnButtonShowP20Click(wxCommandEvent& event)
 
 void MyFrame::OnButtonShowP21Click(wxCommandEvent& event) 
 {
-    propShow->SetPage(generateHTML("Taiwan Water Corporation", 150,4,10,0,0,0,0,0));
+    propShow->SetPage(generateUtilityHTML("Taiwan Water Corporation", 150,4,10,0,0,0,0,0));
 }
 
 void MyFrame::OnButtonShowP22Click(wxCommandEvent& event) 
@@ -1186,7 +1202,7 @@ void MyFrame::OnButtonShowP25Click(wxCommandEvent& event)
 
 void MyFrame::OnButtonShowP26Click(wxCommandEvent& event) 
 {
-    propShow->SetPage(generateHTML("Taipei Train Station", 200,25,50,100,200,0,0,0));
+    propShow->SetPage(generateTrainHTML("Taipei Train Station", 200,25,50,100,200,0,0,0));
 }
 
 void MyFrame::OnButtonShowP27Click(wxCommandEvent& event) 

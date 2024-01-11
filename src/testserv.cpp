@@ -1,10 +1,23 @@
-//#include	"unp.h"
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <cstdlib>
+#include <iostream>
+#include <time.h>
+#include <chrono>
+#include <thread>
 
 extern "C" { 
 #include "unp.h"
 } 
 
 using namespace std;
+
+
+static void sig_alrm(int signo) {
+    cout << "timeout\n";
+	return;
+}
 
 void
 sig_chld(int signo)
@@ -18,41 +31,31 @@ sig_chld(int signo)
 }
 
 int
-main(int argc, char **argv)
-{
-	int					listenfd, connfd;
-	pid_t				childpid;
-	socklen_t			clilen;
-	struct sockaddr_in	cliaddr, servaddr;
-	void				sig_chld(int);
-
-	listenfd = Socket(AF_INET, SOCK_STREAM, 0);
-
-	bzero(&servaddr, sizeof(servaddr));
-	servaddr.sin_family      = AF_INET;
-	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	servaddr.sin_port        = htons(SERV_PORT);
-
-	Bind(listenfd, (SA *) &servaddr, sizeof(servaddr));
-
-	Listen(listenfd, LISTENQ);
-
-	Signal(SIGCHLD, sig_chld);	/* must call waitpid() */
+main(int argc, char **argv) {
+	fd_set rset;
+    FD_ZERO(&rset);
+	Signal(SIGALRM, sig_alrm);
+	int maxfd = STDIN_FILENO + 1;
 
 	for ( ; ; ) {
-		clilen = sizeof(cliaddr);
-		if ( (connfd = accept(listenfd, (SA *) &cliaddr, &clilen)) < 0) {
-			if (errno == EINTR)
-				continue;		/* back to for() */
-			else
-				err_sys("accept error");
+		timeval tv = {10,0};
+		FD_SET(STDIN_FILENO, &rset);
+		alarm(3);
+		int n = select(maxfd, &rset, NULL, NULL, &tv);
+		if (FD_ISSET(STDIN_FILENO, &rset)) {
+			cin.ignore(3);
+		}
+		cout << n << "\n";
+		if (n <= 0) {
+			if (errno == ETIMEDOUT) {
+				cout << "ETIMEDOUT\n";
+			} else {
+				cout << errno << "\n";
+			}
+		} else {
+			cout << "\n";
 		}
 
-		if ( (childpid = Fork()) == 0) {	/* child process */
-			Close(listenfd);	/* close listening socket */
-			str_echo(connfd);	/* process the request */
-			exit(0);
-		}
-		Close(connfd);			/* parent closes connected socket */
+		alarm(0);
 	}
 }
